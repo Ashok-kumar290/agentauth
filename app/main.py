@@ -20,10 +20,15 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler - startup and shutdown."""
     # Startup: Initialize database tables
     # Note: In production, use Alembic migrations instead
-    if settings.debug:
-        await init_db()
+    try:
+        if settings.debug:
+            await init_db()
+    except Exception as e:
+        print(f"Warning: Database init failed: {e}")
+        # Continue anyway - API will work but DB operations will fail
     yield
     # Shutdown: cleanup if needed
+
 
 
 # Create FastAPI application
