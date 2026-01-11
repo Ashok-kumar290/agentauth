@@ -10,13 +10,27 @@ from app.config import get_settings
 
 settings = get_settings()
 
-# Create SSL context for Neon
+# Create SSL context for Neon/Railway PostgreSQL
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
-# Remove SSL params from URL and pass via connect_args
-db_url = settings.database_url.split("?")[0]  # Remove query params
+# Process DATABASE_URL for asyncpg compatibility
+db_url = settings.database_url
+
+# Remove query params (we'll handle SSL via connect_args)
+db_url = db_url.split("?")[0]
+
+# Convert various URL formats to postgresql+asyncpg://
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif not db_url.startswith("postgresql+asyncpg://"):
+    # If it's already asyncpg format, use as-is
+    pass
+
+print(f"Database URL (masked): {db_url[:30]}...{db_url[-20:]}")
 
 # Create async engine with SSL
 engine = create_async_engine(
