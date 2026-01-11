@@ -1,16 +1,16 @@
 # AgentAuth Python SDK
 
-The official Python SDK for AgentAuth - the authorization layer for AI agent purchases.
+Official Python SDK for [AgentAuth](https://agentauth-production.up.railway.app) - the authorization layer for AI agent purchases.
 
 ## Installation
 
 ```bash
-pip install agentauth
+pip install agentauth-client
 ```
 
-For LangChain integration:
+With LangChain support:
 ```bash
-pip install agentauth[langchain]
+pip install agentauth-client[langchain]
 ```
 
 ## Quick Start
