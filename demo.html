@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentAuth - Authorization Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-orange: #f59e0b;
+            --glow-blue: rgba(59, 130, 246, 0.3);
+            --glow-green: rgba(34, 197, 94, 0.3);
+            --glow-red: rgba(239, 68, 68, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(34, 197, 94, 0.05) 0%, transparent 50%);
+            z-index: -1;
+            animation: gradientMove 15s ease infinite;
+        }
+
+        @keyframes gradientMove {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        /* Header */
+        header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #a0a0a0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 999px;
+            font-size: 0.85rem;
+            color: var(--accent-green);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main container */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Flow visualization */
+        .flow-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .flow-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff, #a0a0a0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .flow-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Panels grid */
+        .panels {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .panel-icon.user { background: linear-gradient(135deg, var(--accent-blue), #1d4ed8); }
+        .panel-icon.agent { background: linear-gradient(135deg, var(--accent-purple), #6d28d9); }
+        .panel-icon.merchant { background: linear-gradient(135deg, var(--accent-orange), #d97706); }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .panel-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px var(--glow-blue);
+        }
+
+        input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 0.85rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--glow-blue);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent-green), #16a34a);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--glow-green);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--accent-orange), #d97706);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Result displays */
+        .result-box {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .result-box.success {
+            border-color: rgba(34, 197, 94, 0.5);
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .result-box.error {
+            border-color: rgba(239, 68, 68, 0.5);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Decision badge */
+        .decision-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .decision-badge.allow {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--accent-green);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+
+        .decision-badge.deny {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        /* Audit log */
+        .audit-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .audit-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .audit-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .audit-log {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .audit-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .audit-entry:hover {
+            border-color: var(--border-color);
+        }
+
+        .audit-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .audit-icon.consent { background: rgba(59, 130, 246, 0.2); }
+        .audit-icon.allow { background: rgba(34, 197, 94, 0.2); }
+        .audit-icon.deny { background: rgba(239, 68, 68, 0.2); }
+        .audit-icon.verify { background: rgba(245, 158, 11, 0.2); }
+
+        .audit-content {
+            flex: 1;
+        }
+
+        .audit-message {
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .audit-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .panels {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Token display */
+        .token-display {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            color: var(--accent-blue);
+            max-height: 60px;
+            overflow-y: auto;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-icon">A</div>
+            <span class="logo-text">AgentAuth</span>
+        </div>
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            <span>API Connected</span>
+        </div>
+    </header>
+
+    <main>
+        <div class="flow-header">
+            <h1>Authorization Flow Demo</h1>
+            <p>Test the complete consent → authorize → verify flow</p>
+        </div>
+
+        <div class="panels">
+            <!-- User Panel -->
+            <div class="panel" id="user-panel">
+                <div class="panel-header">
+                    <div class="panel-icon user">👤</div>
+                    <div>
+                        <div class="panel-title">User Consent</div>
+                        <div class="panel-subtitle">Create spending authorization</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>User ID</label>
+                    <input type="text" id="userId" value="user_demo" placeholder="user_123">
+                </div>
+
+                <div class="form-group">
+                    <label>Intent Description</label>
+                    <input type="text" id="intent" value="Buy flight to NYC" placeholder="What do you want to do?">
+                </div>
+
+                <div class="form-group">
+                    <label>Maximum Amount ($)</label>
+                    <input type="number" id="maxAmount" value="500" placeholder="500">
+                </div>
+
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select id="currency">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" onclick="createConsent()">
+                    <span id="consentBtnText">🔐 Create Consent</span>
+                </button>
+
+                <div id="consentResult" style="display: none;"></div>
+            </div>
+
+            <!-- Agent Panel -->
+            <div class="panel" id="agent-panel">
+                <div class="panel-header">
+                    <div class="panel-icon agent">🤖</div>
+                    <div>
+                        <div class="panel-title">Agent Authorization</div>
+                        <div class="panel-subtitle">Request payment approval</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Transaction Amount ($)</label>
+                    <input type="number" id="txAmount" value="347" placeholder="347">
+                </div>
+
+                <div class="form-group">
+                    <label>Merchant</label>
+                    <select id="merchant">
+                        <option value="delta_airlines">Delta Airlines</option>
+                        <option value="united_airlines">United Airlines</option>
+                        <option value="amazon">Amazon</option>
+                        <option value="uber">Uber</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-success" onclick="authorize()" id="authorizeBtn" disabled>
+                    <span id="authBtnText">⚡ Authorize Payment</span>
+                </button>
+
+                <div id="authResult" style="display: none;"></div>
+            </div>
+
+            <!-- Merchant Panel -->
+            <div class="panel" id="merchant-panel">
+                <div class="panel-header">
+                    <div class="panel-icon merchant">🏪</div>
+                    <div>
+                        <div class="panel-title">Merchant Verification</div>
+                        <div class="panel-subtitle">Verify & get chargeback proof</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Authorization Code</label>
+                    <input type="text" id="authCode" placeholder="authz_xxx" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Transaction Amount ($)</label>
+                    <input type="number" id="verifyAmount" value="347" placeholder="347">
+                </div>
+
+                <button class="btn btn-warning" onclick="verify()" id="verifyBtn" disabled>
+                    <span id="verifyBtnText">🔍 Verify Authorization</span>
+                </button>
+
+                <div id="verifyResult" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Audit Log -->
+        <div class="audit-section">
+            <div class="audit-header">
+                <div class="audit-title">📋 Live Audit Log</div>
+                <button class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="clearLog()">Clear</button>
+            </div>
+            <div class="audit-log" id="auditLog">
+                <div class="empty-state">No events yet. Create a consent to start.</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentToken = null;
+        let currentAuthCode = null;
+
+        function addAuditEntry(type, message) {
+            const log = document.getElementById('auditLog');
+            const emptyState = log.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            const icons = {
+                consent: '📋',
+                allow: '✅',
+                deny: '❌',
+                verify: '🔍'
+            };
+
+            const entry = document.createElement('div');
+            entry.className = 'audit-entry';
+            entry.innerHTML = `
+                <div class="audit-icon ${type}">${icons[type]}</div>
+                <div class="audit-content">
+                    <div class="audit-message">${message}</div>
+                    <div class="audit-time">${new Date().toLocaleTimeString()}</div>
+                </div>
+            `;
+            log.insertBefore(entry, log.firstChild);
+        }
+
+        function clearLog() {
+            document.getElementById('auditLog').innerHTML = '<div class="empty-state">No events yet. Create a consent to start.</div>';
+        }
+
+        async function createConsent() {
+            const btn = document.getElementById('consentBtnText');
+            btn.innerHTML = '<div class="spinner"></div> Creating...';
+
+            const data = {
+                user_id: document.getElementById('userId').value,
+                intent: { description: document.getElementById('intent').value },
+                constraints: {
+                    max_amount: parseFloat(document.getElementById('maxAmount').value),
+                    currency: document.getElementById('currency').value
+                },
+                options: { expires_in_seconds: 3600 },
+                signature: 'demo_sig',
+                public_key: 'demo_key'
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/consents`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    currentToken = result.delegation_token;
+                    document.getElementById('consentResult').innerHTML = `
+                        <div class="result-box success">
+                            <strong>✅ Consent Created!</strong><br><br>
+                            <strong>ID:</strong> ${result.consent_id}<br>
+                            <strong>Limit:</strong> $${result.constraints.max_amount} ${result.constraints.currency}<br><br>
+                            <strong>Token:</strong><br>
+                            <div class="token-display">${result.delegation_token.substring(0, 80)}...</div>
+                        </div>
+                    `;
+                    document.getElementById('consentResult').style.display = 'block';
+                    document.getElementById('authorizeBtn').disabled = false;
+                    addAuditEntry('consent', `Consent created with $${data.constraints.max_amount} ${data.constraints.currency} limit`);
+                }
+            } catch (err) {
+                document.getElementById('consentResult').innerHTML = `<div class="result-box error">Error: ${err.message}</div>`;
+                document.getElementById('consentResult').style.display = 'block';
+            }
+
+            btn.innerHTML = '🔐 Create Consent';
+        }
+
+        async function authorize() {
+            const btn = document.getElementById('authBtnText');
+            btn.innerHTML = '<div class="spinner"></div> Authorizing...';
+
+            const amount = parseFloat(document.getElementById('txAmount').value);
+            const merchant = document.getElementById('merchant').value;
+
+            const data = {
+                delegation_token: currentToken,
+                action: 'payment',
+                transaction: {
+                    amount: amount,
+                    currency: document.getElementById('currency').value,
+                    merchant_id: merchant,
+                    merchant_name: merchant.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+                }
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/authorize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                if (result.decision === 'ALLOW') {
+                    currentAuthCode = result.authorization_code;
+                    document.getElementById('authCode').value = currentAuthCode;
+                    document.getElementById('verifyAmount').value = amount;
+                    document.getElementById('authResult').innerHTML = `
+                        <div class="result-box success">
+                            <div class="decision-badge allow">✅ ALLOWED</div>
+                            <strong>Auth Code:</strong> ${result.authorization_code}<br>
+                            <strong>Expires:</strong> ${new Date(result.expires_at).toLocaleTimeString()}
+                        </div>
+                    `;
+                    document.getElementById('verifyBtn').disabled = false;
+                    addAuditEntry('allow', `$${amount} payment authorized for ${data.transaction.merchant_name}`);
+                } else {
+                    document.getElementById('authResult').innerHTML = `
+                        <div class="result-box error">
+                            <div class="decision-badge deny">❌ DENIED</div>
+                            <strong>Reason:</strong> ${result.reason}<br>
+                            <strong>Message:</strong> ${result.message}
+                        </div>
+                    `;
+                    addAuditEntry('deny', `$${amount} payment DENIED: ${result.message}`);
+                }
+                document.getElementById('authResult').style.display = 'block';
+            } catch (err) {
+                document.getElementById('authResult').innerHTML = `<div class="result-box error">Error: ${err.message}</div>`;
+                document.getElementById('authResult').style.display = 'block';
+            }
+
+            btn.innerHTML = '⚡ Authorize Payment';
+        }
+
+        async function verify() {
+            const btn = document.getElementById('verifyBtnText');
+            btn.innerHTML = '<div class="spinner"></div> Verifying...';
+
+            const data = {
+                authorization_code: document.getElementById('authCode').value,
+                transaction: {
+                    amount: parseFloat(document.getElementById('verifyAmount').value),
+                    currency: document.getElementById('currency').value
+                }
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                if (result.valid) {
+                    document.getElementById('verifyResult').innerHTML = `
+                        <div class="result-box success">
+                            <div class="decision-badge allow">✅ VALID</div>
+                            <strong>User Intent:</strong> ${result.consent_proof.user_intent}<br>
+                            <strong>Max Authorized:</strong> $${result.consent_proof.max_authorized_amount}<br>
+                            <strong>Actual Amount:</strong> $${result.consent_proof.actual_amount}<br>
+                            <strong>Proof Token:</strong><br>
+                            <div class="token-display">${result.proof_token.substring(0, 60)}...</div>
+                        </div>
+                    `;
+                    addAuditEntry('verify', `Merchant verified authorization - got chargeback proof`);
+                } else {
+                    document.getElementById('verifyResult').innerHTML = `
+                        <div class="result-box error">
+                            <div class="decision-badge deny">❌ INVALID</div>
+                            <strong>Error:</strong> ${result.error}
+                        </div>
+                    `;
+                    addAuditEntry('deny', `Verification failed: ${result.error}`);
+                }
+                document.getElementById('verifyResult').style.display = 'block';
+            } catch (err) {
+                document.getElementById('verifyResult').innerHTML = `<div class="result-box error">Error: ${err.message}</div>`;
+                document.getElementById('verifyResult').style.display = 'block';
+            }
+
+            btn.innerHTML = '🔍 Verify Authorization';
+        }
+    </script>
+</body>
+</html>

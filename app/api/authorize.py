@@ -1,0 +1,57 @@
+"""
+Authorize API - POST /v1/authorize
+
+Real-time authorization decisions for agent actions.
+"""
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.database import get_db
+from app.schemas.authorize import AuthorizeRequest, AuthorizeResponse
+from app.services.auth_service import auth_service
+
+router = APIRouter(prefix="/v1", tags=["Authorization"])
+
+
+@router.post(
+    "/authorize",
+    response_model=AuthorizeResponse,
+    summary="Request authorization for an action",
+    description="""
+    Request authorization for an agent action (typically a payment).
+    
+    The request includes:
+    - **delegation_token**: JWT token from consent creation
+    - **action**: Type of action (e.g., "payment")
+    - **transaction**: Details of the proposed transaction
+    
+    Returns:
+    - **ALLOW**: Authorization granted with authorization_code
+    - **DENY**: Authorization denied with reason
+    - **STEP_UP**: User confirmation required
+    """,
+)
+async def authorize(
+    request: AuthorizeRequest,
+    db: AsyncSession = Depends(get_db),
+) -> AuthorizeResponse:
+    """
+    Make an authorization decision.
+    
+    This is the critical path - called every time an agent
+    wants to perform an action.
+    
+    The authorization decision is based on:
+    1. Token validity (signature, expiry)
+    2. Amount constraints (within limit?)
+    3. Currency match
+    4. Merchant restrictions
+    """
+    try:
+        response = await auth_service.authorize(db, request)
+        return response
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Authorization failed: {str(e)}"
+        )

@@ -1,0 +1,76 @@
+════════════════════════════════════════════════════════════════
+              AgentAuth - Authorization Demo
+════════════════════════════════════════════════════════════════
+
+📋 STEP 1: Create Consent
+   User: 'Buy me a flight under $500'
+────────────────────────────────────────────────────────────────
+{
+    "consent_id": "cons_Up-_AoOSPbEgZkH8fBMXvQ",
+    "delegation_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjgxMjQ4NTIsImV4cCI6MTc2ODEyODQ1MSwiaXNzIjoiYWdlbnRhdXRoIiwic3ViIjoidXNlcl9kZW1vIiwiY29uc2VudF9pZCI6ImNvbnNfVXAtX0FvT1NQYkVnWmtIOGZCTVh2USIsImludGVudCI6IkJ1eSBmbGlnaHQgdG8gTllDIHVuZGVyICQ1MDAiLCJjb25zdHJhaW50cyI6eyJtYXhfYW1vdW50Ijo1MDAuMCwiY3VycmVuY3kiOiJVU0QiLCJhbGxvd2VkX21lcmNoYW50cyI6bnVsbCwiYWxsb3dlZF9jYXRlZ29yaWVzIjpudWxsfSwic2luZ2xlX3VzZSI6dHJ1ZX0.FUQx2aB2MzV0sWtJ937klG6mrjJ3CGIVDzTzw965N0k",
+    "expires_at": "2026-01-11T10:47:31.454628",
+    "constraints": {
+        "max_amount": 500.0,
+        "currency": "USD",
+        "allowed_merchants": null,
+        "allowed_categories": null
+    }
+}
+
+✅ Consent created with $500 USD limit
+
+════════════════════════════════════════════════════════════════
+🟢 STEP 2A: Authorize $347 Transaction (UNDER LIMIT)
+────────────────────────────────────────────────────────────────
+{
+    "decision": "ALLOW",
+    "authorization_code": "authz_YBVf8skjsIoqIKukZKXaSg",
+    "expires_at": "2026-01-11T09:52:34.860854",
+    "consent_id": "cons_Up-_AoOSPbEgZkH8fBMXvQ",
+    "reason": null,
+    "message": null,
+    "step_up_url": null
+}
+
+✅ ALLOWED - $347 < $500 limit
+
+════════════════════════════════════════════════════════════════
+🔴 STEP 2B: Authorize $600 Transaction (OVER LIMIT)
+────────────────────────────────────────────────────────────────
+{
+    "decision": "DENY",
+    "authorization_code": null,
+    "expires_at": null,
+    "consent_id": null,
+    "reason": "amount_exceeded",
+    "message": "Transaction amount $600.0 exceeds consent limit of $500.0",
+    "step_up_url": null
+}
+
+❌ DENIED - $600 > $500 limit
+
+════════════════════════════════════════════════════════════════
+🔐 STEP 3: Merchant Verification
+────────────────────────────────────────────────────────────────
+{
+    "valid": true,
+    "authorization_id": "bbf18bb9-2aea-407e-99a3-b7c875f905d1",
+    "consent_proof": {
+        "consent_id": "cons_Up-_AoOSPbEgZkH8fBMXvQ",
+        "user_authorized_at": "2026-01-11T09:47:31.455269",
+        "user_intent": "Buy flight to NYC under $500",
+        "max_authorized_amount": 500.0,
+        "actual_amount": 347.0,
+        "currency": "USD",
+        "signature_valid": true
+    },
+    "verification_timestamp": "2026-01-11T09:47:35.474000",
+    "proof_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjgxMjQ4NTUsImlzcyI6ImFnZW50YXV0aCIsInR5cGUiOiJjb25zZW50X3Byb29mIiwiY29uc2VudF9pZCI6ImNvbnNfVXAtX0FvT1NQYkVnWmtIOGZCTVh2USIsImF1dGhvcml6YXRpb25fY29kZSI6ImF1dGh6X1lCVmY4c2tqc0lvcUlLdWtaS1hhU2ciLCJ1c2VyX2ludGVudCI6IkJ1eSBmbGlnaHQgdG8gTllDIHVuZGVyICQ1MDAiLCJtYXhfYXV0aG9yaXplZF9hbW91bnQiOjUwMC4wLCJhY3R1YWxfYW1vdW50IjozNDcuMCwiY3VycmVuY3kiOiJVU0QiLCJ2ZXJpZmllZF9hdCI6IjIwMjYtMDEtMTFUMDk6NDc6MzUuNDc0MDAwIn0.Wdrml8R9l1VxucnKpHx2DUVV692JY_2xiLFq1npwOWE",
+    "error": null
+}
+
+✅ VERIFIED - Merchant gets proof_token for chargeback defense
+
+════════════════════════════════════════════════════════════════
+                    DEMO COMPLETE ✓
+════════════════════════════════════════════════════════════════
