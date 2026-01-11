@@ -13,12 +13,11 @@ COPY README.md .
 COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
+COPY server.py .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -e .
 
-# Expose port
-EXPOSE 8000
+# Railway sets PORT dynamically, server.py reads it from env
+CMD ["python", "server.py"]
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
