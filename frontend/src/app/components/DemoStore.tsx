@@ -18,11 +18,6 @@ import {
     RefreshCw,
 } from "lucide-react";
 
-// API base URL
-const API_BASE = window.location.hostname === "localhost"
-    ? "http://localhost:8000"
-    : "https://agentauth-production.up.railway.app";
-
 // Demo products - designed to show different scenarios
 const PRODUCTS = [
     {
@@ -120,109 +115,68 @@ export function DemoStore({ onBack }: DemoStoreProps) {
         setDenyReason("");
         setShowIntro(false);
 
-        try {
-            // Step 1: AI Agent Activation
-            updateStep("agent", "active", "AI Shopping Agent activated...");
-            await new Promise(r => setTimeout(r, 800));
-            updateStep("agent", "success", "Agent ready to purchase", `Target: ${product.name}`);
+        // Fully simulated - no real API calls needed
+        // Step 1: AI Agent Activation
+        updateStep("agent", "active", "AI Shopping Agent activated...");
+        await new Promise(r => setTimeout(r, 800));
+        updateStep("agent", "success", "Agent ready to purchase", `Target: ${product.name}`);
 
-            // Step 2: Create Consent
-            updateStep("consent", "active", "Creating user spending consent...");
-            await new Promise(r => setTimeout(r, 1000));
+        // Step 2: Create Consent (simulated)
+        updateStep("consent", "active", "Creating user spending consent...");
+        await new Promise(r => setTimeout(r, 1000));
+        updateStep("consent", "success", "Consent granted", `Limit: $${maxBudget} max`);
 
-            const consentPayload = {
-                user_id: `demo_user_${Date.now()}`,
-                intent: { description: `Purchase ${product.name} from ${product.merchant}` },
-                constraints: { max_amount: maxBudget, currency: "USD" },
-                options: { expires_in_seconds: 3600, single_use: true },
-                signature: btoa(JSON.stringify({ demo: true, ts: Date.now() })),
-                public_key: btoa("demo_public_key_" + Date.now())
-            };
+        // Step 3: Check Spending Limits
+        updateStep("limits", "active", "Checking spending limits...");
+        await new Promise(r => setTimeout(r, 800));
 
-            const consentRes = await fetch(`${API_BASE}/v1/consents`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(consentPayload)
-            });
-
-            if (!consentRes.ok) {
-                throw new Error("Failed to create consent");
-            }
-
-            const consent = await consentRes.json();
-            updateStep("consent", "success", "Consent granted", `Limit: $${maxBudget} max`);
-
-            // Step 3: Check Spending Limits
-            updateStep("limits", "active", "Checking spending limits...");
-            await new Promise(r => setTimeout(r, 800));
-
-            if (product.price > maxBudget) {
-                updateStep("limits", "error", "LIMIT EXCEEDED", `$${product.price} > $${maxBudget} budget`);
-            } else {
-                updateStep("limits", "success", "Within spending limit", `$${product.price} < $${maxBudget}`);
-            }
-
-            // Step 4: Check Merchant Rules
-            updateStep("rules", "active", "Evaluating merchant rules...");
-            await new Promise(r => setTimeout(r, 800));
-
-            if (product.scenario === "blocked_merchant") {
-                updateStep("rules", "error", "MERCHANT BLOCKED", `${product.merchant} is on blacklist`);
-            } else {
-                updateStep("rules", "success", "Merchant allowed", `${product.merchant} verified`);
-            }
-
-            // Step 5: Request Authorization
-            updateStep("authorize", "active", "Requesting final authorization...");
-            await new Promise(r => setTimeout(r, 1200));
-
-            const authPayload = {
-                delegation_token: consent.delegation_token,
-                action: "payment",
-                transaction: {
-                    amount: product.price,
-                    currency: "USD",
-                    merchant_id: product.merchant,
-                    merchant_name: product.name,
-                    category: product.category.toLowerCase()
-                }
-            };
-
-            const authRes = await fetch(`${API_BASE}/v1/authorize`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(authPayload)
-            });
-
-            const auth = await authRes.json();
-
-            if (auth.decision === "ALLOW") {
-                setFinalDecision("ALLOW");
-                updateStep("authorize", "success", "✅ AUTHORIZED", `Code: ${auth.authorization_code?.substring(0, 20)}...`);
-
-                // Step 6: Process Payment
-                updateStep("payment", "active", "Processing Stripe payment...");
-                await new Promise(r => setTimeout(r, 1000));
-                updateStep("payment", "success", "💳 Payment processed", `$${product.price} charged`);
-
-                // Step 7: Complete
-                updateStep("complete", "success", "🎉 Purchase complete!", "Transaction recorded");
-                setTransactionComplete(true);
-
-            } else {
-                setFinalDecision("DENY");
-                const reason = auth.reason || (product.price > maxBudget ? "amount_exceeded" : "merchant_blocked");
-                setDenyReason(reason);
-                updateStep("authorize", "error", "❌ DENIED", auth.message || `Reason: ${reason}`);
-            }
-
-        } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : "Unknown error";
-            updateStep("error", "error", "Transaction failed", errorMsg);
-            setFinalDecision("DENY");
-        } finally {
-            setIsProcessing(false);
+        if (product.price > maxBudget) {
+            updateStep("limits", "error", "LIMIT EXCEEDED", `$${product.price} > $${maxBudget} budget`);
+        } else {
+            updateStep("limits", "success", "Within spending limit", `$${product.price} < $${maxBudget}`);
         }
+
+        // Step 4: Check Merchant Rules
+        updateStep("rules", "active", "Evaluating merchant rules...");
+        await new Promise(r => setTimeout(r, 800));
+
+        if (product.scenario === "blocked_merchant") {
+            updateStep("rules", "error", "MERCHANT BLOCKED", `${product.merchant} is on blacklist`);
+        } else {
+            updateStep("rules", "success", "Merchant allowed", `${product.merchant} verified`);
+        }
+
+        // Step 5: Request Authorization (simulated decision)
+        updateStep("authorize", "active", "Requesting final authorization...");
+        await new Promise(r => setTimeout(r, 1200));
+
+        // Determine decision based on rules
+        const isApproved = product.price <= maxBudget && product.scenario !== "blocked_merchant";
+
+        if (isApproved) {
+            setFinalDecision("ALLOW");
+            const fakeAuthCode = `auth_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
+            updateStep("authorize", "success", "✅ AUTHORIZED", `Code: ${fakeAuthCode}`);
+
+            // Step 6: Process Payment (simulated)
+            updateStep("payment", "active", "Processing Stripe payment...");
+            await new Promise(r => setTimeout(r, 1000));
+            updateStep("payment", "success", "💳 Payment processed", `$${product.price} charged`);
+
+            // Step 7: Complete
+            updateStep("complete", "success", "🎉 Purchase complete!", "Transaction recorded");
+            setTransactionComplete(true);
+
+        } else {
+            setFinalDecision("DENY");
+            const reason = product.price > maxBudget ? "amount_exceeded" : "merchant_blocked";
+            setDenyReason(reason);
+            updateStep("authorize", "error", "❌ DENIED", reason === "amount_exceeded"
+                ? `Amount $${product.price} exceeds $${maxBudget} limit`
+                : `Merchant ${product.merchant} is blocked`);
+        }
+
+        setIsProcessing(false);
     };
 
     const handlePurchase = (product: typeof PRODUCTS[0]) => {
@@ -327,12 +281,12 @@ export function DemoStore({ onBack }: DemoStoreProps) {
                                     <motion.div
                                         key={product.id}
                                         className={`p-4 rounded-xl border transition-all cursor-pointer ${isProcessing
-                                                ? "opacity-50 cursor-not-allowed"
-                                                : scenario.color === "green"
-                                                    ? "bg-white/5 border-white/10 hover:border-green-500/50 hover:bg-green-500/5"
-                                                    : scenario.color === "red"
-                                                        ? "bg-red-500/5 border-red-500/20 hover:border-red-500/50"
-                                                        : "bg-orange-500/5 border-orange-500/20 hover:border-orange-500/50"
+                                            ? "opacity-50 cursor-not-allowed"
+                                            : scenario.color === "green"
+                                                ? "bg-white/5 border-white/10 hover:border-green-500/50 hover:bg-green-500/5"
+                                                : scenario.color === "red"
+                                                    ? "bg-red-500/5 border-red-500/20 hover:border-red-500/50"
+                                                    : "bg-orange-500/5 border-orange-500/20 hover:border-orange-500/50"
                                             }`}
                                         whileHover={!isProcessing ? { scale: 1.02 } : {}}
                                         whileTap={!isProcessing ? { scale: 0.98 } : {}}
@@ -344,8 +298,8 @@ export function DemoStore({ onBack }: DemoStoreProps) {
                                         <div className="flex items-center justify-between">
                                             <span className="text-lg font-bold text-white">${product.price}</span>
                                             <span className={`text-[10px] px-2 py-0.5 rounded-full ${scenario.color === "green" ? "bg-green-500/20 text-green-400" :
-                                                    scenario.color === "red" ? "bg-red-500/20 text-red-400" :
-                                                        "bg-orange-500/20 text-orange-400"
+                                                scenario.color === "red" ? "bg-red-500/20 text-red-400" :
+                                                    "bg-orange-500/20 text-orange-400"
                                                 }`}>
                                                 {scenario.text}
                                             </span>
@@ -391,20 +345,20 @@ export function DemoStore({ onBack }: DemoStoreProps) {
                                         <motion.div
                                             key={step.step}
                                             className={`flex items-start gap-3 p-3 rounded-lg ${step.status === "success" ? "bg-green-500/10" :
-                                                    step.status === "error" ? "bg-red-500/10" :
-                                                        step.status === "warning" ? "bg-yellow-500/10" :
-                                                            step.status === "active" ? "bg-purple-500/10" :
-                                                                "bg-gray-500/10"
+                                                step.status === "error" ? "bg-red-500/10" :
+                                                    step.status === "warning" ? "bg-yellow-500/10" :
+                                                        step.status === "active" ? "bg-purple-500/10" :
+                                                            "bg-gray-500/10"
                                                 }`}
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: index * 0.05 }}
                                         >
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${step.status === "success" ? "bg-green-500/30" :
-                                                    step.status === "error" ? "bg-red-500/30" :
-                                                        step.status === "warning" ? "bg-yellow-500/30" :
-                                                            step.status === "active" ? "bg-purple-500/30" :
-                                                                "bg-gray-500/30"
+                                                step.status === "error" ? "bg-red-500/30" :
+                                                    step.status === "warning" ? "bg-yellow-500/30" :
+                                                        step.status === "active" ? "bg-purple-500/30" :
+                                                            "bg-gray-500/30"
                                                 }`}>
                                                 {step.status === "success" && <Check className="w-4 h-4 text-green-400" />}
                                                 {step.status === "error" && <X className="w-4 h-4 text-red-400" />}
@@ -414,9 +368,9 @@ export function DemoStore({ onBack }: DemoStoreProps) {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className={`font-medium ${step.status === "success" ? "text-green-400" :
-                                                        step.status === "error" ? "text-red-400" :
-                                                            step.status === "warning" ? "text-yellow-400" :
-                                                                "text-white"
+                                                    step.status === "error" ? "text-red-400" :
+                                                        step.status === "warning" ? "text-yellow-400" :
+                                                            "text-white"
                                                     }`}>{step.message}</p>
                                                 {step.detail && (
                                                     <p className="text-xs text-gray-500 mt-0.5">{step.detail}</p>
@@ -433,8 +387,8 @@ export function DemoStore({ onBack }: DemoStoreProps) {
                             {finalDecision && !isProcessing && (
                                 <motion.div
                                     className={`mt-6 p-4 rounded-xl ${finalDecision === "ALLOW"
-                                            ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30"
-                                            : "bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30"
+                                        ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30"
+                                        : "bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30"
                                         }`}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
