@@ -1,11 +1,14 @@
 # Root netlify.toml - points to the frontend subdirectory
 [build]
-  base = "Dark-Themed Landing Page"
-  command = "npm run build"
-  publish = "Dark-Themed Landing Page/dist"
-  functions = "Dark-Themed Landing Page/netlify/functions"
+  base = "Dark-Themed Landing Page/"
+  command = "npm install && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
 
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
 
 # Handle SPA routing - redirect all routes to index.html
@@ -13,10 +16,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-
-# API redirects to serverless functions
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-  force = true
