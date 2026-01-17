@@ -1,6 +1,6 @@
-# Root netlify.toml - points to the frontend subdirectory
+# Netlify configuration for AgentAuth frontend
 [build]
-  base = "Dark-Themed Landing Page/"
+  base = "frontend"
   command = "npm install && npm run build"
   publish = "dist"
 
@@ -11,7 +11,7 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Handle SPA routing - redirect all routes to index.html
+# Handle SPA routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
