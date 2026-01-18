@@ -62,10 +62,10 @@ export function Hero() {
         >
           <div className="text-2xl text-white">AgentAuth</div>
           <div className="flex items-center gap-8">
-            <a href="#docs" className="text-gray-400 hover:text-white transition-colors">
+            <a href="/docs" className="text-gray-400 hover:text-white transition-colors">
               Docs
             </a>
-            <a href="#demo" className="text-gray-400 hover:text-white transition-colors">
+            <a href="/demo" className="text-gray-400 hover:text-white transition-colors">
               Demo
             </a>
             <a href="#pricing" className="text-gray-400 hover:text-white transition-colors">
@@ -174,7 +174,7 @@ export function Hero() {
               transition={{ duration: 0.6, delay: 0.55 }}
             >
               <a
-                href="#demo"
+                href="/demo"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500/20 to-cyan-500/20 border border-purple-500/40 text-white rounded-lg hover:from-purple-500/30 hover:to-cyan-500/30 transition-all group"
               >
                 <span className="relative flex h-2 w-2">

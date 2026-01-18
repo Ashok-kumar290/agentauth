@@ -305,7 +305,7 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
                     <h3 className="text-lg font-semibold text-white mb-3">🎉 You're ready!</h3>
                     <p className="text-gray-400 mb-4">That's it! Your AI agent can now make authorized purchases within user-defined limits.</p>
                     <div className="flex flex-wrap gap-3">
-                        <a href="#demo" className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition-colors">
+                        <a href="/demo" className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition-colors">
                             Try the Demo →
                         </a>
                         <a href="#" className="px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 transition-colors">
@@ -323,7 +323,7 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
             <div className="space-y-6">
                 <p className="text-gray-300">
                     AgentAuth uses API keys for authentication. You can get your API keys from the
-                    <a href="#portal" className="text-purple-400 hover:text-purple-300 ml-1">Developer Portal</a>.
+                    <a href="/portal" className="text-purple-400 hover:text-purple-300 ml-1">Developer Portal</a>.
                 </p>
 
                 <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
@@ -411,7 +411,7 @@ export function Docs({ onBack }: DocsProps) {
                             <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">⌘K</kbd>
                         </div>
 
-                        <a href="#demo" className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition-colors">
+                        <a href="/demo" className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition-colors">
                             Try Demo
                         </a>
 

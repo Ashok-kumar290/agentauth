@@ -133,7 +133,7 @@ export function FAQ() {
           <div className="relative">
             <p className="text-gray-400 mb-4">Still have questions?</p>
             <motion.a
-              href="#contact"
+              href="/contact"
               className="inline-flex items-center gap-2 text-white hover:text-gray-300 transition-colors"
               whileHover={{ x: 5 }}
             >
