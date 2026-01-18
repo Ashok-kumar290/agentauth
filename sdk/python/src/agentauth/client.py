@@ -144,6 +144,11 @@ class AgentAuth:
         # Initialize API wrappers
         self.consents = ConsentsAPI(self)
         
+        # Retry configuration
+        self.max_retries = 3
+        self.base_delay = 0.5  # seconds
+        self.max_delay = 4.0   # seconds
+        
         # Setup HTTP client
         headers = {"Content-Type": "application/json"}
         if api_key:
@@ -161,28 +166,62 @@ class AgentAuth:
         path: str,
         **kwargs
     ) -> Dict[str, Any]:
-        """Make an HTTP request to the API."""
-        try:
-            response = self._http.request(method, path, **kwargs)
-            
-            if response.status_code == 429:
-                retry_after = response.headers.get("Retry-After")
-                raise RateLimitExceeded(retry_after=int(retry_after) if retry_after else None)
-            
-            if response.status_code == 204:
-                return {}
-            
-            if response.status_code >= 400:
-                error_data = response.json() if response.content else {}
-                raise APIError(
-                    status_code=response.status_code,
-                    message=error_data.get("detail", "Unknown error")
-                )
-            
-            return response.json()
-            
-        except httpx.RequestError as e:
-            raise AgentAuthError(f"Request failed: {str(e)}")
+        """
+        Make an HTTP request to the API with retry logic.
+        
+        Implements exponential backoff for transient failures and rate limits.
+        """
+        import time
+        import random
+        
+        last_exception = None
+        
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = self._http.request(method, path, **kwargs)
+                
+                # Rate limit - retry with backoff
+                if response.status_code == 429:
+                    retry_after = response.headers.get("Retry-After")
+                    if retry_after and attempt < self.max_retries:
+                        time.sleep(int(retry_after))
+                        continue
+                    raise RateLimitExceeded(retry_after=int(retry_after) if retry_after else None)
+                
+                # Server errors - retry with exponential backoff  
+                if response.status_code >= 500 and attempt < self.max_retries:
+                    delay = min(
+                        self.base_delay * (2 ** attempt) + random.uniform(0, 0.1),
+                        self.max_delay
+                    )
+                    time.sleep(delay)
+                    continue
+                
+                if response.status_code == 204:
+                    return {}
+                
+                if response.status_code >= 400:
+                    error_data = response.json() if response.content else {}
+                    raise APIError(
+                        status_code=response.status_code,
+                        message=error_data.get("detail", "Unknown error")
+                    )
+                
+                return response.json()
+                
+            except httpx.RequestError as e:
+                last_exception = e
+                if attempt < self.max_retries:
+                    delay = min(
+                        self.base_delay * (2 ** attempt) + random.uniform(0, 0.1),
+                        self.max_delay
+                    )
+                    time.sleep(delay)
+                    continue
+                raise AgentAuthError(f"Request failed after {self.max_retries + 1} attempts: {str(e)}")
+        
+        if last_exception:
+            raise AgentAuthError(f"Request failed: {str(last_exception)}")
     
     def authorize(
         self,
@@ -361,6 +400,11 @@ class AsyncAgentAuth:
         
         self.consents = AsyncConsentsAPI(self)
         
+        # Retry configuration
+        self.max_retries = 3
+        self.base_delay = 0.5  # seconds
+        self.max_delay = 4.0   # seconds
+        
         headers = {"Content-Type": "application/json"}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -377,28 +421,62 @@ class AsyncAgentAuth:
         path: str,
         **kwargs
     ) -> Dict[str, Any]:
-        """Make an async HTTP request to the API."""
-        try:
-            response = await self._http.request(method, path, **kwargs)
-            
-            if response.status_code == 429:
-                retry_after = response.headers.get("Retry-After")
-                raise RateLimitExceeded(retry_after=int(retry_after) if retry_after else None)
-            
-            if response.status_code == 204:
-                return {}
-            
-            if response.status_code >= 400:
-                error_data = response.json() if response.content else {}
-                raise APIError(
-                    status_code=response.status_code,
-                    message=error_data.get("detail", "Unknown error")
-                )
-            
-            return response.json()
-            
-        except httpx.RequestError as e:
-            raise AgentAuthError(f"Request failed: {str(e)}")
+        """
+        Make an async HTTP request to the API with retry logic.
+        
+        Implements exponential backoff for transient failures and rate limits.
+        """
+        import asyncio
+        import random
+        
+        last_exception = None
+        
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = await self._http.request(method, path, **kwargs)
+                
+                # Rate limit - retry with backoff
+                if response.status_code == 429:
+                    retry_after = response.headers.get("Retry-After")
+                    if retry_after and attempt < self.max_retries:
+                        await asyncio.sleep(int(retry_after))
+                        continue
+                    raise RateLimitExceeded(retry_after=int(retry_after) if retry_after else None)
+                
+                # Server errors - retry with exponential backoff
+                if response.status_code >= 500 and attempt < self.max_retries:
+                    delay = min(
+                        self.base_delay * (2 ** attempt) + random.uniform(0, 0.1),
+                        self.max_delay
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                
+                if response.status_code == 204:
+                    return {}
+                
+                if response.status_code >= 400:
+                    error_data = response.json() if response.content else {}
+                    raise APIError(
+                        status_code=response.status_code,
+                        message=error_data.get("detail", "Unknown error")
+                    )
+                
+                return response.json()
+                
+            except httpx.RequestError as e:
+                last_exception = e
+                if attempt < self.max_retries:
+                    delay = min(
+                        self.base_delay * (2 ** attempt) + random.uniform(0, 0.1),
+                        self.max_delay
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise AgentAuthError(f"Request failed after {self.max_retries + 1} attempts: {str(e)}")
+        
+        if last_exception:
+            raise AgentAuthError(f"Request failed: {str(last_exception)}")
     
     async def authorize(
         self,
