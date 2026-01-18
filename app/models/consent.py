@@ -38,6 +38,9 @@ class Consent(Base):
     # User identification
     user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     
+    # Developer/Tenant identification (for RLS)
+    developer_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    
     # Intent - what the user wants to do
     intent_description: Mapped[str] = mapped_column(Text, nullable=False)
     intent_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256

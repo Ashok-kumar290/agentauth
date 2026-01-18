@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from app.config import get_settings
 from app.api import consents_router, authorize_router, verify_router, payments_router, dashboard_router, admin_router, limits_router, rules_router, analytics_router, webhooks_router
 from app.models.database import init_db
-from app.middleware import RateLimitMiddleware, IdempotencyMiddleware, generate_api_key, DEMO_KEY
+from app.middleware import RateLimitMiddleware, IdempotencyMiddleware, TenantContextMiddleware, generate_api_key, DEMO_KEY
 from app.services.cache_service import close_redis, get_cache_service
 
 settings = get_settings()
@@ -36,6 +36,14 @@ async def lifespan(app: FastAPI):
         print("Redis cache service initialized")
     except Exception as e:
         print(f"Warning: Redis init failed (will use in-memory fallback): {e}")
+    
+    # Initialize OpenTelemetry tracing (optional)
+    try:
+        from app.tracing import init_tracing
+        init_tracing(app, service_name="agentauth")
+        print("OpenTelemetry tracing initialized")
+    except Exception as e:
+        print(f"Warning: Tracing init failed: {e}")
     
     yield
     
@@ -102,7 +110,8 @@ app.add_middleware(
 # Add idempotency middleware for transaction safety
 app.add_middleware(IdempotencyMiddleware)
 
-
+# Add tenant context middleware for RLS
+app.add_middleware(TenantContextMiddleware)
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,

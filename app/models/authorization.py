@@ -45,6 +45,9 @@ class Authorization(Base):
         index=True
     )
     
+    # Developer/Tenant identification (for RLS)
+    developer_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    
     # Decision
     decision: Mapped[str] = mapped_column(
         String(20),

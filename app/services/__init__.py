@@ -19,6 +19,13 @@ from app.services.velocity_service import (
     VelocityCheckResult,
     check_transaction_velocity,
 )
+from app.services.event_service import (
+    EventService,
+    EventType,
+    CloudEvent,
+    get_event_service,
+    emit_event,
+)
 
 __all__ = [
     "TokenService",
@@ -35,4 +42,9 @@ __all__ = [
     "VelocityRules",
     "VelocityCheckResult",
     "check_transaction_velocity",
+    "EventService",
+    "EventType",
+    "CloudEvent",
+    "get_event_service",
+    "emit_event",
 ]

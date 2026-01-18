@@ -15,6 +15,13 @@ from app.middleware.idempotency import (
     get_idempotency_key,
     require_idempotency_key,
 )
+from app.middleware.tenant_context import (
+    TenantContextMiddleware,
+    set_tenant_context,
+    get_tenant_id,
+    require_tenant_id,
+    TenantAwareSession,
+)
 
 __all__ = [
     "RateLimitMiddleware",
@@ -29,4 +36,9 @@ __all__ = [
     "generate_idempotency_key",
     "get_idempotency_key",
     "require_idempotency_key",
+    "TenantContextMiddleware",
+    "set_tenant_context",
+    "get_tenant_id",
+    "require_tenant_id",
+    "TenantAwareSession",
 ]
