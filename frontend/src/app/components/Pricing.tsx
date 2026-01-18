@@ -4,31 +4,53 @@ import { useState } from "react";
 
 const pricingTiers = [
     {
-        id: "free",
-        name: "Free",
+        id: "community",
+        name: "Community",
         price: 0,
-        period: "",
-        apiCalls: "100/month",
+        period: "forever",
+        metric: "1,000 MAA",
+        metricLabel: "Monthly Active Agents",
         features: [
+            "Core RBAC/ABAC policies",
             "Basic authorization API",
-            "Email support",
-            "Community access",
+            "Community support",
+            "7-day audit logs",
+            "1 environment",
         ],
-        cta: "Get Started",
+        cta: "Get Started Free",
+        popular: false,
+    },
+    {
+        id: "startup",
+        name: "Startup",
+        price: 49,
+        period: "/month",
+        metric: "10,000 MAA",
+        metricLabel: "Monthly Active Agents",
+        features: [
+            "Everything in Community",
+            "GitOps CI/CD integration",
+            "30-day audit logs",
+            "10 tenants",
+            "Email support",
+        ],
+        cta: "Start Free Trial",
         popular: false,
     },
     {
         id: "pro",
         name: "Pro",
-        price: 49,
+        price: 199,
         period: "/month",
-        apiCalls: "10,000/month",
+        metric: "50,000 MAA",
+        metricLabel: "Monthly Active Agents",
         features: [
-            "Everything in Free",
-            "Advanced analytics",
-            "Priority support",
-            "Custom spending rules",
-            "Webhook notifications",
+            "Everything in Startup",
+            "Full audit logging dashboard",
+            "SSO/SAML integration",
+            "Priority Slack support",
+            "SOC2 compliance report",
+            "1,000 tenants",
         ],
         cta: "Start Pro Trial",
         popular: true,
@@ -36,16 +58,17 @@ const pricingTiers = [
     {
         id: "enterprise",
         name: "Enterprise",
-        price: 199,
-        period: "/month",
-        apiCalls: "Unlimited",
+        price: -1, // Custom
+        period: "",
+        metric: "Unlimited",
+        metricLabel: "Monthly Active Agents",
         features: [
             "Everything in Pro",
-            "Dedicated support",
+            "On-premise deployment option",
+            "99.99% SLA guarantee",
+            "Dedicated CSM",
             "Custom integrations",
-            "SLA guarantee",
-            "On-premise option",
-            "Advanced security",
+            "HIPAA compliance",
         ],
         cta: "Contact Sales",
         popular: false,
@@ -69,7 +92,7 @@ const cardVariants = {
         y: 0,
         transition: {
             duration: 0.6,
-            ease: "easeOut",
+            ease: [0.25, 0.46, 0.45, 0.94] as const,
         },
     },
 };
@@ -119,7 +142,7 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                 </motion.div>
 
                 <motion.div
-                    className="grid md:grid-cols-3 gap-6 lg:gap-8"
+                    className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6"
                     variants={containerVariants}
                     initial="hidden"
                     whileInView="visible"
@@ -153,8 +176,8 @@ export function Pricing({ onSelectPlan }: PricingProps) {
 
                             <motion.div
                                 className={`relative p-8 rounded-2xl border h-full flex flex-col ${tier.popular
-                                        ? "border-white/30 bg-gradient-to-b from-white/10 to-white/[0.02]"
-                                        : "border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent"
+                                    ? "border-white/30 bg-gradient-to-b from-white/10 to-white/[0.02]"
+                                    : "border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent"
                                     } backdrop-blur-sm overflow-hidden`}
                             >
                                 {/* Glow effect for popular */}
@@ -180,15 +203,26 @@ export function Pricing({ onSelectPlan }: PricingProps) {
 
                                     {/* Price */}
                                     <div className="mb-6">
-                                        <span className="text-5xl font-bold text-white">
-                                            ${tier.price}
-                                        </span>
-                                        <span className="text-gray-400">{tier.period}</span>
+                                        {tier.price === -1 ? (
+                                            <span className="text-4xl font-bold text-white">Custom</span>
+                                        ) : tier.price === 0 ? (
+                                            <>
+                                                <span className="text-5xl font-bold text-white">Free</span>
+                                                <span className="text-gray-400 ml-2">{tier.period}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-5xl font-bold text-white">${tier.price}</span>
+                                                <span className="text-gray-400">{tier.period}</span>
+                                            </>
+                                        )}
                                     </div>
 
-                                    {/* API calls */}
+                                    {/* Metric */}
                                     <p className="text-sm text-gray-400 mb-6 pb-6 border-b border-white/10">
-                                        <span className="text-white font-medium">{tier.apiCalls}</span> API calls
+                                        <span className="text-white font-medium">{tier.metric}</span>
+                                        <br />
+                                        <span className="text-xs text-gray-500">{tier.metricLabel}</span>
                                     </p>
 
                                     {/* Features */}
@@ -213,8 +247,8 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                                 <motion.button
                                     onClick={() => handleSelectPlan(tier.id)}
                                     className={`w-full py-3 px-6 rounded-xl font-semibold text-sm transition-all ${tier.popular
-                                            ? "bg-white text-black hover:bg-gray-100"
-                                            : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
+                                        ? "bg-white text-black hover:bg-gray-100"
+                                        : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
                                         }`}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}

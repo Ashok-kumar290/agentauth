@@ -106,14 +106,22 @@ export function Hero() {
             </motion.h1>
 
             <motion.p
-              className="text-xl text-gray-400 mb-8 leading-relaxed"
+              className="text-xl text-gray-400 mb-4 leading-relaxed"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              Authorization infrastructure for AI agents. Set spending limits,
-              control merchants, and let autonomous systems transact with
-              confidence.
+              The authorization layer for AI agent payments. Set spending limits,
+              control merchants, and let autonomous systems transact with confidence.
+            </motion.p>
+
+            <motion.p
+              className="text-sm text-gray-500 mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.45 }}
+            >
+              Stripe handles checkout. <span className="text-white/70">AgentAuth handles whether checkout should happen.</span>
             </motion.p>
 
             <motion.form
