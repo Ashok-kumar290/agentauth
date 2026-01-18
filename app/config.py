@@ -37,6 +37,20 @@ class Settings(BaseSettings):
     admin_jwt_secret: str = "admin-secret-change-in-production"
     admin_token_expiry: int = 3600  # 1 hour
     
+    # Redis settings
+    redis_url: str = "redis://localhost:6379"
+    redis_password: str = ""
+    redis_db: int = 0
+    redis_ssl: bool = False
+    
+    # Rate limiting
+    rate_limit_requests_per_second: int = 100
+    rate_limit_burst: int = 200
+    
+    # Caching
+    cache_ttl_seconds: int = 300  # 5 minutes default
+    cache_consent_ttl: int = 600  # 10 minutes for consents
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -12,7 +12,8 @@ from fastapi.responses import HTMLResponse
 from app.config import get_settings
 from app.api import consents_router, authorize_router, verify_router, payments_router, dashboard_router, admin_router, limits_router, rules_router, analytics_router, webhooks_router
 from app.models.database import init_db
-from app.middleware import RateLimitMiddleware, generate_api_key, DEMO_KEY
+from app.middleware import RateLimitMiddleware, IdempotencyMiddleware, generate_api_key, DEMO_KEY
+from app.services.cache_service import close_redis, get_cache_service
 
 settings = get_settings()
 
@@ -28,8 +29,22 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Warning: Database init failed: {e}")
         # Continue anyway - API will work but DB operations will fail
+    
+    # Initialize Redis connection (optional - will fail gracefully if unavailable)
+    try:
+        cache = get_cache_service()
+        print("Redis cache service initialized")
+    except Exception as e:
+        print(f"Warning: Redis init failed (will use in-memory fallback): {e}")
+    
     yield
-    # Shutdown: cleanup if needed
+    
+    # Shutdown: Close Redis connection
+    try:
+        await close_redis()
+        print("Redis connection closed")
+    except Exception:
+        pass
 
 
 
@@ -83,6 +98,9 @@ app.add_middleware(
     requests_per_minute=100,
     api_key_requests_per_minute=1000,
 )
+
+# Add idempotency middleware for transaction safety
+app.add_middleware(IdempotencyMiddleware)
 
 
 # Configure CORS
@@ -178,4 +196,20 @@ async def landing():
     )
 
 
-
+@app.get("/metrics", tags=["Metrics"])
+async def metrics():
+    """Get system metrics including cache stats."""
+    try:
+        cache = get_cache_service()
+        cache_stats = await cache.get_stats()
+    except Exception:
+        cache_stats = {"status": "unavailable"}
+    
+    return {
+        "cache": cache_stats,
+        "infrastructure": {
+            "rate_limiting": "enabled",
+            "idempotency": "enabled",
+            "velocity_checks": "enabled"
+        }
+    }
