@@ -14,6 +14,7 @@ import { DemoStore } from "./components/DemoStore";
 import { DeveloperPortal } from "./components/DeveloperPortal";
 import { Docs } from "./components/Docs";
 import { YCDemo } from "./components/YCDemo";
+import { Contact } from "./components/Contact";
 import { supabase } from "../lib/supabase";
 
 const PLAN_DETAILS: Record<string, { name: string; price: number }> = {
@@ -63,7 +64,7 @@ const isProcessingOAuth = processOAuthOnLoad();
 
 export default function App() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState<"home" | "nucleus" | "demo" | "portal" | "docs" | "yc">("home");
+  const [currentPage, setCurrentPage] = useState<"home" | "nucleus" | "demo" | "portal" | "docs" | "yc" | "contact">("home");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -85,6 +86,8 @@ export default function App() {
         setCurrentPage("docs");
       } else if (hash === "#yc") {
         setCurrentPage("yc");
+      } else if (hash === "#contact") {
+        setCurrentPage("contact");
       } else {
         setCurrentPage("home");
       }
@@ -133,6 +136,10 @@ export default function App() {
 
   if (currentPage === "yc") {
     return <YCDemo onBack={() => { window.location.hash = ""; setCurrentPage("home"); }} />;
+  }
+
+  if (currentPage === "contact") {
+    return <Contact onBack={() => { window.location.hash = ""; setCurrentPage("home"); }} />;
   }
 
   return (
