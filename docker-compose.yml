@@ -1,0 +1,150 @@
+# AgentAuth Self-Hosted Docker Compose
+# Complete production deployment with all dependencies
+
+version: '3.8'
+
+services:
+  # ============================================================
+  # AgentAuth API Server
+  # ============================================================
+  agentauth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentauth-api
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://agentauth:${DB_PASSWORD:-agentauth}@postgres:5432/agentauth
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DEBUG=false
+      # Optional: OpenTelemetry
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      # Optional: OPA
+      - OPA_URL=http://opa:8181
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - agentauth-network
+
+  # ============================================================
+  # PostgreSQL Database
+  # ============================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: agentauth-db
+    environment:
+      - POSTGRES_USER=agentauth
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-agentauth}
+      - POSTGRES_DB=agentauth
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U agentauth" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - agentauth-network
+
+  # ============================================================
+  # Redis Cache
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: agentauth-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - agentauth-network
+
+  # ============================================================
+  # Open Policy Agent (OPA) - Optional
+  # ============================================================
+  opa:
+    image: openpolicyagent/opa:latest-static
+    container_name: agentauth-opa
+    command:
+      - "run"
+      - "--server"
+      - "--log-level=info"
+      - "--addr=0.0.0.0:8181"
+    ports:
+      - "${OPA_PORT:-8181}:8181"
+    restart: unless-stopped
+    networks:
+      - agentauth-network
+    profiles:
+      - with-opa
+
+  # ============================================================
+  # Jaeger Tracing - Optional
+  # ============================================================
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: agentauth-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686" # UI
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+    restart: unless-stopped
+    networks:
+      - agentauth-network
+    profiles:
+      - with-tracing
+
+  # ============================================================
+  # Nginx Reverse Proxy - Optional
+  # ============================================================
+  nginx:
+    image: nginx:alpine
+    container_name: agentauth-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+    depends_on:
+      - agentauth
+    restart: unless-stopped
+    networks:
+      - agentauth-network
+    profiles:
+      - with-nginx
+
+volumes:
+  postgres_data:
+  redis_data:
+
+
+networks:
+  agentauth-network:
+    driver: bridge
