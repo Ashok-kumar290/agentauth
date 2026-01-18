@@ -39,7 +39,7 @@ export function FAQ() {
   return (
     <section className="relative px-6 py-24 border-t border-white/5">
       <div className="max-w-3xl mx-auto">
-        <motion.div 
+        <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -63,7 +63,7 @@ export function FAQ() {
             >
               <motion.div
                 className="border border-white/5 rounded-xl bg-white/[0.02] overflow-hidden transition-all"
-                whileHover={{ 
+                whileHover={{
                   borderColor: "rgba(255, 255, 255, 0.1)",
                   transition: { duration: 0.2 }
                 }}
@@ -74,9 +74,9 @@ export function FAQ() {
                   whileTap={{ scale: 0.99 }}
                 >
                   <span className="text-lg text-white pr-8">{faq.question}</span>
-                  <motion.div 
+                  <motion.div
                     className="flex-shrink-0 w-6 h-6 rounded-full bg-white/5 flex items-center justify-center"
-                    animate={{ 
+                    animate={{
                       rotate: openIndex === index ? 180 : 0,
                       backgroundColor: openIndex === index ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.05)"
                     }}
@@ -89,7 +89,7 @@ export function FAQ() {
                     )}
                   </motion.div>
                 </motion.button>
-                
+
                 <AnimatePresence>
                   {openIndex === index && (
                     <motion.div
@@ -99,7 +99,7 @@ export function FAQ() {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
                       <div className="px-6 pb-6 pt-0">
-                        <motion.p 
+                        <motion.p
                           className="text-gray-400 leading-relaxed"
                           initial={{ y: -10 }}
                           animate={{ y: 0 }}
@@ -116,7 +116,7 @@ export function FAQ() {
           ))}
         </div>
 
-        <motion.div 
+        <motion.div
           className="mt-12 text-center p-8 rounded-xl border border-white/5 bg-white/[0.02] relative overflow-hidden group"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -129,19 +129,19 @@ export function FAQ() {
             whileHover={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           />
-          
+
           <div className="relative">
             <p className="text-gray-400 mb-4">Still have questions?</p>
             <motion.a
-              href="#"
+              href="#contact"
               className="inline-flex items-center gap-2 text-white hover:text-gray-300 transition-colors"
               whileHover={{ x: 5 }}
             >
               Contact our team
-              <motion.svg 
-                className="w-4 h-4" 
-                fill="none" 
-                viewBox="0 0 24 24" 
+              <motion.svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
                 stroke="currentColor"
                 animate={{ x: [0, 3, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
