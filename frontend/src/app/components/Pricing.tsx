@@ -123,10 +123,18 @@ export function Pricing({ onSelectPlan, userEmail, userId }: PricingProps) {
             return;
         }
 
-        // Paid plans - redirect to Stripe Checkout
-        if (!userEmail || !userId) {
-            setError("Please sign in to upgrade your plan");
-            return;
+        // For paid plans - if no email, prompt for it
+        let checkoutEmail = userEmail;
+        let checkoutUserId = userId;
+
+        if (!checkoutEmail) {
+            const email = window.prompt("Enter your email to continue to checkout:");
+            if (!email || !email.includes("@")) {
+                setError("Valid email is required for checkout");
+                return;
+            }
+            checkoutEmail = email;
+            checkoutUserId = `guest_${Date.now()}`;
         }
 
         setIsLoading(planId);
@@ -138,8 +146,8 @@ export function Pricing({ onSelectPlan, userEmail, userId }: PricingProps) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     plan: planId,
-                    email: userEmail,
-                    userId: userId,
+                    email: checkoutEmail,
+                    userId: checkoutUserId || `user_${Date.now()}`,
                     successUrl: `${window.location.origin}/portal?checkout=success`,
                     cancelUrl: `${window.location.origin}/pricing?checkout=canceled`,
                 }),
