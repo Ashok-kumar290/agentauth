@@ -7,7 +7,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL |
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 // Create Supabase client with service role for server-side operations
-const supabase = SUPABASE_URL && SUPABASE_SERVICE_KEY 
+const supabase = SUPABASE_URL && SUPABASE_SERVICE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
   : null;
 
@@ -16,13 +16,12 @@ interface WaitlistRequest {
   name?: string;
 }
 
-const sendWelcomeEmail = async (email: string, inviteCode: string): Promise<boolean> => {
+// Send "Thank you for joining" email (NOT beta access yet)
+const sendWaitlistConfirmationEmail = async (email: string, position?: number): Promise<boolean> => {
   if (!RESEND_API_KEY) {
     console.log("RESEND_API_KEY not set, skipping email send");
     return false;
   }
-
-  const dashboardUrl = `https://agentauth.in/#portal`;
 
   const emailHtml = `
 <!DOCTYPE html>
@@ -45,30 +44,36 @@ const sendWelcomeEmail = async (email: string, inviteCode: string): Promise<bool
 
           <tr>
             <td style="padding: 48px 40px 32px 40px; text-align: center;">
-              <div style="display: inline-block; padding: 6px 14px; background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(59,130,246,0.2)); border-radius: 100px; margin-bottom: 24px; border: 1px solid rgba(168,85,247,0.3);">
-                <span style="color: #a855f7; font-size: 13px; font-weight: 600;">🎉 Beta Access Granted</span>
+              <div style="display: inline-block; padding: 6px 14px; background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(168,85,247,0.2)); border-radius: 100px; margin-bottom: 24px; border: 1px solid rgba(59,130,246,0.3);">
+                <span style="color: #3b82f6; font-size: 13px; font-weight: 600;">⏳ Waitlist Confirmed</span>
               </div>
-              <h1 style="color: #ffffff; font-size: 36px; margin: 0 0 12px 0; font-weight: 600;">You're In!</h1>
-              <p style="color: rgba(255,255,255,0.5); font-size: 17px; margin: 0;">Your beta access is now active</p>
+              <h1 style="color: #ffffff; font-size: 36px; margin: 0 0 12px 0; font-weight: 600;">You're on the list!</h1>
+              <p style="color: rgba(255,255,255,0.5); font-size: 17px; margin: 0;">Thank you for your interest in AgentAuth</p>
             </td>
           </tr>
 
           <tr>
             <td style="padding: 0 40px 32px 40px;">
-              <div style="background: linear-gradient(135deg, rgba(168,85,247,0.1), rgba(59,130,246,0.1)); border-radius: 12px; padding: 20px; border: 1px solid rgba(168,85,247,0.2); text-align: center; margin-bottom: 24px;">
-                <div style="color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 8px; text-transform: uppercase;">Your Invite Code</div>
-                <div style="color: #a855f7; font-size: 24px; font-weight: 600; letter-spacing: 2px;">${inviteCode}</div>
+              <div style="background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(168,85,247,0.1)); border-radius: 12px; padding: 24px; border: 1px solid rgba(59,130,246,0.2); text-align: center; margin-bottom: 24px;">
+                <p style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.7; margin: 0;">
+                  We're currently in private beta and adding new users gradually. 
+                  We'll send you an email with your access code as soon as a spot opens up!
+                </p>
               </div>
-              <p style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
-                You now have full access to the Developer Dashboard. Create API keys, integrate with your AI agents, and start building with AgentAuth.
-              </p>
+              
+              <div style="text-align: center; padding: 16px; background: rgba(168,85,247,0.1); border-radius: 8px; border: 1px solid rgba(168,85,247,0.2);">
+                <p style="color: rgba(255,255,255,0.5); font-size: 13px; margin: 0 0 4px 0;">WHAT'S NEXT?</p>
+                <p style="color: #a855f7; font-size: 15px; margin: 0; font-weight: 500;">
+                  📬 Watch your inbox for your beta access invite
+                </p>
+              </div>
             </td>
           </tr>
 
           <tr>
             <td style="padding: 8px 40px 40px 40px; text-align: center;">
-              <a href="${dashboardUrl}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #a855f7, #3b82f6); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 15px;">
-                Access Dashboard →
+              <a href="https://agentauth.in" style="display: inline-block; padding: 14px 28px; background: transparent; color: rgba(255,255,255,0.6); text-decoration: none; border-radius: 10px; font-weight: 500; font-size: 14px; border: 1px solid rgba(255,255,255,0.2);">
+                Learn More About AgentAuth
               </a>
             </td>
           </tr>
@@ -90,16 +95,18 @@ const sendWelcomeEmail = async (email: string, inviteCode: string): Promise<bool
 </html>
   `;
 
-  const emailText = `You're In! Beta Access Granted
+  const emailText = `You're on the Waitlist!
 
-Your invite code: ${inviteCode}
+Thank you for your interest in AgentAuth.
 
-You now have full access to the Developer Dashboard. Create API keys, integrate with your AI agents, and start building with AgentAuth.
+We're currently in private beta and adding new users gradually. We'll send you an email with your access code as soon as a spot opens up!
 
-Access Dashboard: ${dashboardUrl}
+What's next?
+Watch your inbox for your beta access invite.
 
 ---
 AgentAuth
+https://agentauth.in
 `;
 
   try {
@@ -112,7 +119,7 @@ AgentAuth
       body: JSON.stringify({
         from: "AgentAuth <hello@agentauth.in>",
         to: [email],
-        subject: "�� Your AgentAuth Beta Access is Ready!",
+        subject: "⏳ You're on the AgentAuth Waitlist!",
         html: emailHtml,
         text: emailText,
       }),
@@ -127,15 +134,6 @@ AgentAuth
     console.error("Error sending email:", error);
     return false;
   }
-};
-
-const generateInviteCode = (): string => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = 'AA-';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
 };
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
@@ -161,45 +159,80 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       return { statusCode: 400, headers, body: JSON.stringify({ error: "Valid email required" }) };
     }
 
-    const inviteCode = generateInviteCode();
+    const normalizedEmail = email.toLowerCase().trim();
+    let isNewSignup = true;
+    let position: number | undefined;
 
     // Save to Supabase if configured
     if (supabase) {
-      const { data, error } = await supabase
+      // Check if already on waitlist
+      const { data: existing } = await supabase
         .from('waitlist')
-        .upsert({ 
-          email: email.toLowerCase().trim(),
-          name,
-          invite_code: inviteCode,
-          status: 'approved',
-          beta_access: true,
-          approved_at: new Date().toISOString()
-        }, { 
-          onConflict: 'email',
-          ignoreDuplicates: false 
-        })
-        .select()
+        .select('id, status, beta_access')
+        .eq('email', normalizedEmail)
         .single();
 
-      if (error && error.code !== '23505') { // Ignore duplicate key errors
-        console.error("Supabase error:", error);
+      if (existing) {
+        // Already on waitlist
+        if (existing.beta_access) {
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              success: true,
+              message: "You already have beta access! Check your email for your invite code.",
+              alreadyApproved: true,
+            }),
+          };
+        }
+        isNewSignup = false;
       } else {
-        console.log(`Waitlist signup saved: ${email}`);
+        // New signup - add to waitlist with pending status
+        const { data, error } = await supabase
+          .from('waitlist')
+          .insert({
+            email: normalizedEmail,
+            name: name?.trim() || null,
+            status: 'pending',           // NOT approved yet
+            beta_access: false,           // NO beta access yet
+            created_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+
+        if (error && error.code !== '23505') {
+          console.error("Supabase error:", error);
+        } else {
+          console.log(`Waitlist signup saved: ${normalizedEmail}`);
+        }
+
+        // Get position in queue
+        const { count } = await supabase
+          .from('waitlist')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+
+        position = count || undefined;
       }
     } else {
-      console.log(`Waitlist signup (no DB): ${email}`);
+      console.log(`Waitlist signup (no DB): ${normalizedEmail}`);
     }
 
-    // Send welcome email with beta access
-    const emailSent = await sendWelcomeEmail(email, inviteCode);
+    // Send confirmation email (only for new signups)
+    let emailSent = false;
+    if (isNewSignup) {
+      emailSent = await sendWaitlistConfirmationEmail(normalizedEmail, position);
+    }
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        message: "You're in! Check your email for beta access.",
-        inviteCode,
+        message: isNewSignup
+          ? "Thanks for joining! We'll email you when a spot opens up."
+          : "You're already on the waitlist! We'll notify you soon.",
+        position: position,
         emailSent,
       }),
     };
