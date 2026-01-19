@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from app.config import get_settings
-from app.api import consents_router, authorize_router, verify_router, payments_router, dashboard_router, admin_router, limits_router, rules_router, analytics_router, webhooks_router
+from app.api import consents_router, authorize_router, verify_router, payments_router, dashboard_router, admin_router, limits_router, rules_router, analytics_router, webhooks_router, billing_router
 from app.models.database import init_db
 from app.middleware import RateLimitMiddleware, IdempotencyMiddleware, TenantContextMiddleware, generate_api_key, DEMO_KEY
 from app.services.cache_service import close_redis, get_cache_service
@@ -133,7 +133,7 @@ app.include_router(limits_router)
 app.include_router(rules_router)
 app.include_router(analytics_router)
 app.include_router(webhooks_router)
-
+app.include_router(billing_router)
 
 
 @app.get("/", tags=["Root"])

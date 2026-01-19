@@ -11,11 +11,11 @@ from app.api.limits import router as limits_router
 from app.api.rules import router as rules_router
 from app.api.analytics import router as analytics_router
 from app.api.webhooks import router as webhooks_router
+from app.api.billing import router as billing_router
 
 __all__ = [
     "consents_router", "authorize_router", "verify_router", 
     "payments_router", "dashboard_router", "admin_router",
-    "limits_router", "rules_router", "analytics_router", "webhooks_router"
+    "limits_router", "rules_router", "analytics_router", "webhooks_router",
+    "billing_router",
 ]
-
-
