@@ -9,13 +9,6 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# Ensure Netlify functions are not caught by SPA fallback
-# Functions must be listed BEFORE the catch-all SPA redirect
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
 # SPA fallback for client-side routing
 [[redirects]]
   from = "/*"
