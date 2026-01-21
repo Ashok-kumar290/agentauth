@@ -11,7 +11,18 @@ export function DeveloperPortal({ onClose }: DeveloperPortalProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [hasBetaAccess, setHasBetaAccess] = useState<boolean | null>(null);
-  const [view, setView] = useState<"login" | "signup" | "verify" | "settings" | "forgot" | "checkout-success">("login");
+  const [view, setView] = useState<"login" | "signup" | "verify" | "settings" | "forgot" | "checkout-success">(() => {
+    // Detect checkout success SYNCHRONOUSLY during initial render
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("checkout") === "success") {
+        // Clean URL after a short delay to ensure state is set
+        setTimeout(() => window.history.replaceState(null, "", "/portal"), 100);
+        return "checkout-success";
+      }
+    }
+    return "login";
+  });
   const mountedRef = useRef(true);
 
   const [email, setEmail] = useState("");
@@ -35,14 +46,6 @@ export function DeveloperPortal({ onClose }: DeveloperPortalProps) {
     const initAuth = async () => {
       try {
         const hash = window.location.hash;
-        const urlParams = new URLSearchParams(window.location.search);
-
-        // Detect checkout success - show special success view
-        if (urlParams.get("checkout") === "success") {
-          setView("checkout-success");
-          // Clean up URL
-          window.history.replaceState(null, "", "/portal");
-        }
 
         if (hash.includes("access_token")) {
           await new Promise(resolve => setTimeout(resolve, 500));
