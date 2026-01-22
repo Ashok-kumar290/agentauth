@@ -1,6 +1,16 @@
 -- OTP verification codes table
 -- Run this in your Supabase SQL editor
 
+-- Drop existing policies if they exist (to allow re-running migration)
+DROP POLICY IF EXISTS "Users can view own OTP codes" ON otp_codes;
+DROP POLICY IF EXISTS "Service role can insert OTP codes" ON otp_codes;
+DROP POLICY IF EXISTS "Service role can update OTP codes" ON otp_codes;
+DROP POLICY IF EXISTS "Service role can delete OTP codes" ON otp_codes;
+DROP POLICY IF EXISTS "Users can view own security settings" ON user_security_settings;
+DROP POLICY IF EXISTS "Users can update own security settings" ON user_security_settings;
+DROP POLICY IF EXISTS "Service role can upsert security settings" ON user_security_settings;
+
+-- Create tables if they don't exist
 CREATE TABLE IF NOT EXISTS otp_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -33,11 +43,9 @@ ALTER TABLE otp_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_security_settings ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for otp_codes
--- Users can only see their own OTP codes
 CREATE POLICY "Users can view own OTP codes" ON otp_codes
   FOR SELECT USING (auth.uid() = user_id);
 
--- Service role can insert OTP codes (via Netlify functions)
 CREATE POLICY "Service role can insert OTP codes" ON otp_codes
   FOR INSERT WITH CHECK (true);
 

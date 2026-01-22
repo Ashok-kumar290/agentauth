@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
-import { Lock, Loader2, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { Lock, Loader2, Eye, EyeOff, CheckCircle2, AlertCircle, Mail } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+
+type PageState = "loading" | "ready" | "error" | "success";
 
 export function SetPasswordPage() {
     const [password, setPassword] = useState("");
@@ -9,35 +12,106 @@ export function SetPasswordPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState(false);
-    const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+    const [formError, setFormError] = useState("");
+    const [pageState, setPageState] = useState<PageState>("loading");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [searchParams] = useSearchParams();
 
     useEffect(() => {
-        // Check if we have a valid session from the reset link
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+        checkAuthState();
+    }, []);
 
-            // Also check for hash parameters (Supabase uses hash for reset tokens)
-            const hash = window.location.hash;
-            const hasResetToken = hash.includes("type=recovery") || hash.includes("access_token");
+    const checkAuthState = async () => {
+        // 1. Check for error in URL query params FIRST
+        const errorParam = searchParams.get("error");
+        const errorCode = searchParams.get("error_code");
+        const errorDescription = searchParams.get("error_description");
 
-            if (session || hasResetToken) {
-                setIsValidSession(true);
-            } else {
-                setIsValidSession(false);
+        if (errorParam || errorCode) {
+            const message = errorDescription?.replace(/\+/g, " ") ||
+                errorCode?.replace(/_/g, " ") ||
+                "The reset link is invalid or has expired";
+            setErrorMessage(message);
+            setPageState("error");
+            return;
+        }
+
+        // 2. Check for hash params (Supabase sends tokens in hash)
+        const hash = window.location.hash;
+        const hashParams = new URLSearchParams(hash.substring(1));
+
+        const accessToken = hashParams.get("access_token");
+        const tokenType = hashParams.get("type");
+        const refreshToken = hashParams.get("refresh_token");
+
+        // 3. If we have recovery tokens, set up the session
+        if (tokenType === "recovery" && accessToken) {
+            try {
+                const { error } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken || ""
+                });
+
+                if (error) {
+                    setErrorMessage(error.message);
+                    setPageState("error");
+                    return;
+                }
+
+                // Clear the hash from URL for cleaner UX
+                window.history.replaceState(null, "", "/set-password");
+                setPageState("ready");
+                return;
+            } catch (err) {
+                setErrorMessage("Failed to verify reset link. Please request a new one.");
+                setPageState("error");
+                return;
             }
-        };
+        }
 
-        // Handle the auth callback from Supabase
-        supabase.auth.onAuthStateChange((event: string) => {
-            if (event === "PASSWORD_RECOVERY") {
-                setIsValidSession(true);
+        // 4. Check for existing session (user might already be authenticated)
+        try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+
+            if (error) {
+                setErrorMessage(error.message);
+                setPageState("error");
+                return;
+            }
+
+            if (session) {
+                // User has a valid session, they can set password
+                setPageState("ready");
+                return;
+            }
+        } catch (err) {
+            // Session check failed
+        }
+
+        // 5. Listen for auth state changes
+        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === "PASSWORD_RECOVERY" && session) {
+                setPageState("ready");
+            } else if (event === "SIGNED_IN" && session) {
+                setPageState("ready");
             }
         });
 
-        checkSession();
-    }, []);
+        // 6. Wait a bit for potential auth state change, then show error if still loading
+        setTimeout(() => {
+            setPageState((currentState) => {
+                if (currentState === "loading") {
+                    setErrorMessage("No valid reset link found. Please request a new password reset.");
+                    return "error";
+                }
+                return currentState;
+            });
+        }, 3000);
+
+        return () => {
+            listener?.subscription?.unsubscribe();
+        };
+    };
 
     const validatePassword = (pwd: string): string[] => {
         const errors: string[] = [];
@@ -54,15 +128,15 @@ export function SetPasswordPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError("");
+        setFormError("");
 
         if (!isPasswordValid) {
-            setError("Please meet all password requirements");
+            setFormError("Please meet all password requirements");
             return;
         }
 
         if (!passwordsMatch) {
-            setError("Passwords do not match");
+            setFormError("Passwords do not match");
             return;
         }
 
@@ -71,36 +145,38 @@ export function SetPasswordPage() {
             const { error } = await supabase.auth.updateUser({ password });
 
             if (error) {
-                setError(error.message);
+                setFormError(error.message);
             } else {
-                setSuccess(true);
-                // Clear URL hash
-                window.history.replaceState(null, "", "/set-password");
+                setPageState("success");
                 // Redirect to portal after 2 seconds
                 setTimeout(() => {
                     window.location.href = "/portal";
                 }, 2000);
             }
         } catch (err) {
-            setError("Failed to update password. Please try again.");
+            setFormError("Failed to update password. Please try again.");
         }
         setIsLoading(false);
     };
 
-    // Loading state while checking session
-    if (isValidSession === null) {
+    // Loading state
+    if (pageState === "loading") {
         return (
             <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
-                <div className="text-center">
-                    <Loader2 className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-4" />
+                <motion.div
+                    className="text-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                >
+                    <Loader2 className="w-10 h-10 text-purple-500 animate-spin mx-auto mb-4" />
                     <p className="text-gray-400">Verifying reset link...</p>
-                </div>
+                </motion.div>
             </section>
         );
     }
 
-    // Invalid or expired link
-    if (isValidSession === false) {
+    // Error state
+    if (pageState === "error") {
         return (
             <section className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
                 <motion.div
@@ -114,14 +190,23 @@ export function SetPasswordPage() {
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">Invalid or Expired Link</h2>
                         <p className="text-gray-400 mb-6">
-                            This password reset link is invalid or has expired. Please request a new one.
+                            {errorMessage || "This password reset link is invalid or has expired. Please request a new one."}
                         </p>
-                        <a
-                            href="/reset-password"
-                            className="inline-block bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90 transition-opacity"
-                        >
-                            Request New Link
-                        </a>
+                        <div className="space-y-3">
+                            <a
+                                href="/reset-password"
+                                className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90 transition-opacity"
+                            >
+                                <Mail className="w-4 h-4" />
+                                Request New Link
+                            </a>
+                            <a
+                                href="/portal"
+                                className="block w-full bg-white/5 border border-white/10 text-white px-6 py-3 rounded-xl font-medium hover:bg-white/10 transition-colors"
+                            >
+                                Back to Sign In
+                            </a>
+                        </div>
                     </div>
                 </motion.div>
             </section>
@@ -129,7 +214,7 @@ export function SetPasswordPage() {
     }
 
     // Success state
-    if (success) {
+    if (pageState === "success") {
         return (
             <section className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
                 <motion.div
@@ -142,10 +227,11 @@ export function SetPasswordPage() {
                             <CheckCircle2 className="w-8 h-8 text-green-400" />
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">Password Updated!</h2>
-                        <p className="text-gray-400 mb-4">
+                        <p className="text-gray-400 mb-2">
                             Your password has been successfully changed.
                         </p>
-                        <p className="text-gray-500 text-sm">
+                        <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
                             Redirecting to dashboard...
                         </p>
                     </div>
@@ -154,6 +240,7 @@ export function SetPasswordPage() {
         );
     }
 
+    // Ready state - show password form
     return (
         <section className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
             <motion.div
@@ -175,9 +262,10 @@ export function SetPasswordPage() {
                 </div>
 
                 <div className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl">
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-                            ⚠️ {error}
+                    {formError && (
+                        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                            {formError}
                         </div>
                     )}
 
@@ -268,6 +356,13 @@ export function SetPasswordPage() {
                         </div>
                     </form>
                 </div>
+
+                <p className="text-center text-gray-500 text-sm mt-6">
+                    Remember your password?{" "}
+                    <a href="/portal" className="text-purple-400 hover:text-purple-300 transition-colors">
+                        Sign in instead
+                    </a>
+                </p>
             </motion.div>
         </section>
     );

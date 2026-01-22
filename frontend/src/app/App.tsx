@@ -18,6 +18,7 @@ import { YCDemo } from "./components/YCDemo";
 import { Contact } from "./components/Contact";
 import { ResetPasswordPage } from "./components/auth/ResetPasswordPage";
 import { SetPasswordPage } from "./components/auth/SetPasswordPage";
+import { AuthCallbackPage } from "./components/auth/AuthCallbackPage";
 import { supabase } from "../lib/supabase";
 
 const PLAN_DETAILS: Record<string, { name: string; price: number }> = {
@@ -161,6 +162,7 @@ export default function App() {
         <Route path="/portal" element={<PortalPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/yc" element={<YCPage />} />
         <Route path="/nucleus" element={<NucleusPage />} />
         {/* Fallback to home for any unknown routes */}
