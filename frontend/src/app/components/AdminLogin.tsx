@@ -25,7 +25,7 @@ export function AdminLogin({ onLoginSuccess, onAuthenticated, onBack }: AdminLog
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${API_BASE}/v1/admin/login`, {
+            const response = await fetch(`/.netlify/functions/admin-login`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
