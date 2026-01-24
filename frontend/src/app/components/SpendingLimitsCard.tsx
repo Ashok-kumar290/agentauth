@@ -4,7 +4,7 @@ import { DollarSign, TrendingUp, AlertTriangle, Save, RefreshCw } from "lucide-r
 
 const API_BASE = window.location.hostname === "localhost"
     ? "http://localhost:8000"
-    : "https://agentauth-production.up.railway.app";
+    : "https://agentauth.railway.app";
 
 interface SpendingLimitsData {
     daily_limit: string;

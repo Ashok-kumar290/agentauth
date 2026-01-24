@@ -5,7 +5,7 @@ import { Lock, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
 // API base URL - use localhost for local dev, production URL otherwise
 const API_BASE = window.location.hostname === "localhost"
     ? "http://localhost:8000"
-    : "https://agentauth-production.up.railway.app";
+    : "https://agentauth.railway.app";
 
 interface AdminLoginProps {
     onLoginSuccess?: (token: string) => void;

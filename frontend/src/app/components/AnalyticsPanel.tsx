@@ -4,7 +4,7 @@ import { BarChart3, TrendingUp, TrendingDown, CheckCircle, XCircle } from "lucid
 
 const API_BASE = window.location.hostname === "localhost"
     ? "http://localhost:8000"
-    : "https://agentauth-production.up.railway.app";
+    : "https://agentauth.railway.app";
 
 interface AnalyticsSummary {
     total_authorizations: number;

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentBuy - Voice Payment Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+        
+        .demo-container {
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .voice-button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        
+        #voiceBtn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            cursor: pointer;
+            font-size: 3rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.4);
+        }
+        
+        #voiceBtn:hover {
+            transform: scale(1.05);
+        }
+        
+        #voiceBtn.recording {
+            background: linear-gradient(135deg, #ef4444, #f97316);
+            animation: pulse 1.5s infinite;
+        }
+        
+        #voiceBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+        }
+        
+        .status {
+            margin-top: 15px;
+            font-size: 1rem;
+            color: #888;
+            min-height: 24px;
+        }
+        
+        .status.listening {
+            color: #ef4444;
+        }
+        
+        .status.processing {
+            color: #f59e0b;
+        }
+        
+        .transcript-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .transcript-box h3 {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        #transcript {
+            font-size: 1.2rem;
+            color: white;
+            min-height: 30px;
+        }
+        
+        .result-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            display: none;
+        }
+        
+        .result-card.success {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+        
+        .result-card.denied {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .result-icon {
+            font-size: 2rem;
+        }
+        
+        .result-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .result-details {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .result-label {
+            color: #888;
+        }
+        
+        .result-value {
+            font-weight: 500;
+        }
+        
+        .result-value.mono {
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        
+        .steps-list {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+        }
+        
+        .steps-list h4 {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+        }
+        
+        .step {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #22c55e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+        
+        .receipt-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: opacity 0.3s;
+        }
+        
+        .receipt-link:hover {
+            opacity: 0.9;
+        }
+        
+        .hint {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .hint code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛒 AgentBuy</h1>
+        <p>Voice-Powered AI Payment Agent</p>
+    </div>
+    
+    <div class="demo-container">
+        <div class="voice-button-container">
+            <button id="voiceBtn">🎤</button>
+            <p class="status" id="status">Tap to speak your payment command</p>
+        </div>
+        
+        <div class="transcript-box">
+            <h3>📝 Your Command</h3>
+            <p id="transcript">—</p>
+        </div>
+        
+        <div class="result-card" id="resultCard">
+            <div class="result-header">
+                <span class="result-icon" id="resultIcon">✅</span>
+                <span class="result-title" id="resultTitle">Payment Successful</span>
+            </div>
+            
+            <div class="result-details">
+                <div class="result-row">
+                    <span class="result-label">Amount</span>
+                    <span class="result-value" id="resultAmount">$0.00</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Merchant</span>
+                    <span class="result-value" id="resultMerchant">—</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">AgentAuth Code</span>
+                    <span class="result-value mono" id="resultAuthCode">—</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Stripe Payment ID</span>
+                    <span class="result-value mono" id="resultPaymentId">—</span>
+                </div>
+            </div>
+            
+            <div class="steps-list" id="stepsList">
+                <h4>✨ Agent Actions</h4>
+                <div id="stepsContainer"></div>
+            </div>
+            
+            <a href="#" class="receipt-link" id="receiptLink" target="_blank" style="display: none;">
+                📄 View Stripe Receipt (Merchant Proof)
+            </a>
+        </div>
+        
+        <p class="hint">
+            Try saying: <code>"Pay $10 for Notion"</code> or <code>"Buy lunch from DoorDash for $25"</code>
+        </p>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:8001';
+        
+        const voiceBtn = document.getElementById('voiceBtn');
+        const statusEl = document.getElementById('status');
+        const transcriptEl = document.getElementById('transcript');
+        const resultCard = document.getElementById('resultCard');
+        
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        
+        voiceBtn.addEventListener('click', toggleRecording);
+        
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+        
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                
+                mediaRecorder.onstop = async () => {
+                    stream.getTracks().forEach(t => t.stop());
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await processAudio(audioBlob);
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                voiceBtn.textContent = '⏹';
+                voiceBtn.classList.add('recording');
+                statusEl.textContent = '🔴 Listening... Tap to stop';
+                statusEl.classList.add('listening');
+                resultCard.style.display = 'none';
+                
+            } catch (err) {
+                console.error('Mic error:', err);
+                statusEl.textContent = '❌ Microphone access denied';
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                voiceBtn.textContent = '🎤';
+                voiceBtn.classList.remove('recording');
+                statusEl.textContent = '⏳ Processing payment...';
+                statusEl.classList.remove('listening');
+                statusEl.classList.add('processing');
+                voiceBtn.disabled = true;
+            }
+        }
+        
+        async function processAudio(audioBlob) {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+            formData.append('user_id', 'demo_user');
+            
+            try {
+                const response = await fetch(`${API_URL}/v1/voice-pay`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                displayResult(data);
+                
+            } catch (err) {
+                console.error('API error:', err);
+                statusEl.textContent = '❌ Connection failed. Is the API running?';
+                statusEl.classList.remove('processing');
+            }
+            
+            voiceBtn.disabled = false;
+        }
+        
+        function displayResult(data) {
+            statusEl.classList.remove('processing');
+            
+            // Update transcript
+            if (data.message) {
+                transcriptEl.textContent = data.message;
+            }
+            
+            // Update result card
+            resultCard.style.display = 'block';
+            
+            if (data.success) {
+                resultCard.className = 'result-card success';
+                document.getElementById('resultIcon').textContent = '✅';
+                document.getElementById('resultTitle').textContent = 'Payment Successful!';
+                statusEl.textContent = '✅ Payment complete!';
+            } else {
+                resultCard.className = 'result-card denied';
+                document.getElementById('resultIcon').textContent = '❌';
+                document.getElementById('resultTitle').textContent = 'Payment Denied';
+                statusEl.textContent = '❌ Payment was denied';
+            }
+            
+            document.getElementById('resultAmount').textContent = data.amount ? `$${data.amount.toFixed(2)}` : '—';
+            document.getElementById('resultMerchant').textContent = data.merchant || '—';
+            document.getElementById('resultAuthCode').textContent = data.authorization_code || '—';
+            document.getElementById('resultPaymentId').textContent = data.payment_id || '—';
+            
+            // Display steps
+            const stepsContainer = document.getElementById('stepsContainer');
+            stepsContainer.innerHTML = '';
+            
+            if (data.steps) {
+                data.steps.forEach((step, i) => {
+                    const stepEl = document.createElement('div');
+                    stepEl.className = 'step';
+                    stepEl.innerHTML = `
+                        <span class="step-icon">✓</span>
+                        <span>${step}</span>
+                    `;
+                    stepsContainer.appendChild(stepEl);
+                });
+            }
+            
+            // Receipt link (merchant proof)
+            const receiptLink = document.getElementById('receiptLink');
+            if (data.receipt_url) {
+                receiptLink.href = data.receipt_url;
+                receiptLink.style.display = 'inline-block';
+            } else if (data.payment_id) {
+                // Link to Stripe dashboard for test mode
+                receiptLink.href = `https://dashboard.stripe.com/test/payments/${data.payment_id}`;
+                receiptLink.textContent = '📄 View in Stripe Dashboard';
+                receiptLink.style.display = 'inline-block';
+            } else {
+                receiptLink.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

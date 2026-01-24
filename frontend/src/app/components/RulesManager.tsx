@@ -4,7 +4,7 @@ import { Shield, Plus, Trash2, Store, Tag, Check, X } from "lucide-react";
 
 const API_BASE = window.location.hostname === "localhost"
     ? "http://localhost:8000"
-    : "https://agentauth-production.up.railway.app";
+    : "https://agentauth.railway.app";
 
 interface MerchantRule {
     id: string;
