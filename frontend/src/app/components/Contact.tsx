@@ -91,9 +91,9 @@ export function Contact({ onBack }: ContactProps) {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-6">
-                        <MessageSquare className="w-4 h-4 text-purple-400" />
-                        <span className="text-purple-400 text-sm font-medium">Get in Touch</span>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800/50 border border-zinc-700 rounded-full mb-6">
+                        <MessageSquare className="w-4 h-4 text-zinc-400" />
+                        <span className="text-zinc-400 text-sm font-medium">Get in Touch</span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
                         Contact Our Team
@@ -145,7 +145,7 @@ export function Contact({ onBack }: ContactProps) {
                                     value={formData.name}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-zinc-600 transition-colors"
                                     placeholder="John Doe"
                                 />
                             </div>
@@ -162,7 +162,7 @@ export function Contact({ onBack }: ContactProps) {
                                     value={formData.email}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-zinc-600 transition-colors"
                                     placeholder="john@company.com"
                                 />
                             </div>
@@ -180,7 +180,7 @@ export function Contact({ onBack }: ContactProps) {
                                     name="company"
                                     value={formData.company}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-zinc-600 transition-colors"
                                     placeholder="Acme Inc."
                                 />
                             </div>
@@ -195,7 +195,7 @@ export function Contact({ onBack }: ContactProps) {
                                     value={formData.subject}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50 transition-colors appearance-none cursor-pointer"
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-zinc-600 transition-colors appearance-none cursor-pointer"
                                 >
                                     {subjects.map(s => (
                                         <option key={s.value} value={s.value} className="bg-[#12121A]">
@@ -218,7 +218,7 @@ export function Contact({ onBack }: ContactProps) {
                                 onChange={handleChange}
                                 required
                                 rows={5}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-zinc-600 transition-colors resize-none"
                                 placeholder="Tell us how we can help..."
                             />
                         </div>
@@ -232,7 +232,7 @@ export function Contact({ onBack }: ContactProps) {
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full py-4 bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full py-4 bg-gradient-to-r from-zinc-600 to-zinc-500 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isSubmitting ? (
                                 <>
@@ -263,7 +263,7 @@ export function Contact({ onBack }: ContactProps) {
                     <p className="text-gray-500 mb-4">Or reach us directly at</p>
                     <a
                         href="mailto:hello@agentauth.in"
-                        className="text-purple-400 hover:text-purple-300 text-lg font-medium"
+                        className="text-zinc-400 hover:text-zinc-300 text-lg font-medium"
                     >
                         hello@agentauth.in
                     </a>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useSearchParams } from "react-router-dom";
 import { Hero } from "./components/Hero";
 import { Features } from "./components/Features";
 import { UseCases } from "./components/UseCases";
@@ -12,6 +12,7 @@ import { LaunchSection } from "./components/LaunchSection";
 import { Dashboard } from "./components/Dashboard";
 import { AdminLogin } from "./components/AdminLogin";
 import { DemoStore } from "./components/DemoStore";
+import { DemoStoreEnhanced } from "./components/DemoStoreEnhanced";
 import { DeveloperPortal } from "./components/DeveloperPortal";
 import { Docs } from "./components/Docs";
 import { YCDemo } from "./components/YCDemo";
@@ -19,7 +20,7 @@ import { Contact } from "./components/Contact";
 import { ResetPasswordPage } from "./components/auth/ResetPasswordPage";
 import { SetPasswordPage } from "./components/auth/SetPasswordPage";
 import { AuthCallbackPage } from "./components/auth/AuthCallbackPage";
-import { supabase } from "../lib/supabase";
+import { supabase, checkBetaAccess } from "../lib/supabase";
 
 const PLAN_DETAILS: Record<string, { name: string; price: number }> = {
   community: { name: "Community", price: 0 },
@@ -82,7 +83,7 @@ function HomePage() {
   const handlePaymentSuccess = (p: string) => { console.log(`Payment for ${PLAN_DETAILS[p]?.name}`); setSelectedPlan(null); };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
+    <div className="min-h-screen bg-black">
       <Hero />
       <Features />
       <UseCases />
@@ -108,7 +109,7 @@ function HomePage() {
 // Wrapper components with navigation
 function DemoPage() {
   const navigate = useNavigate();
-  return <DemoStore onBack={() => navigate("/")} />;
+  return <DemoStoreEnhanced onBack={() => navigate("/")} />;
 }
 
 function DocsPage() {
@@ -133,14 +134,87 @@ function YCPage() {
 
 function NucleusPage() {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(isAdminAuthenticated());
+  const [searchParams] = useSearchParams();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const checkoutSuccess = searchParams.get("checkout") === "success";
 
-  const handleAdminAuth = (a: boolean) => setIsAuthenticated(a);
+  useEffect(() => {
+    const initAuth = async () => {
+      // Check for admin token first (password-based access)
+      if (isAdminAuthenticated()) {
+        setIsAuthenticated(true);
+        setIsAdminMode(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Check for Supabase user session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(session.user);
+          setIsAuthenticated(true);
+          setIsAdminMode(false);
+        }
+      } catch (err) {
+        console.error("Auth check error:", err);
+      }
+      setIsLoading(false);
+    };
+
+    initAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        setIsAuthenticated(true);
+        setIsAdminMode(false);
+      } else if (!isAdminAuthenticated()) {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAdminAuth = (a: boolean) => {
+    setIsAuthenticated(a);
+    setIsAdminMode(true);
+  };
+
+  const handleLogout = async () => {
+    if (isAdminMode) {
+      localStorage.removeItem("admin_token");
+      localStorage.removeItem("admin_expires");
+    } else {
+      await supabase.auth.signOut();
+    }
+    setIsAuthenticated(false);
+    setIsAdminMode(false);
+    setUser(null);
+    navigate("/");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isAuthenticated) {
-    return <Dashboard />;
+    return <Dashboard user={user} isAdminMode={isAdminMode} onLogout={handleLogout} checkoutSuccess={checkoutSuccess} />;
   }
-  return <AdminLogin onAuthenticated={handleAdminAuth} onBack={() => navigate("/")} />;
+  return <AdminLogin onAuthenticated={handleAdminAuth} onBack={() => navigate("/")} showUserLogin={true} />;
 }
 
 // Loading component

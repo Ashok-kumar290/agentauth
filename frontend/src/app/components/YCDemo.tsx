@@ -11,8 +11,9 @@ import {
     Check,
     ArrowRight,
 } from "lucide-react";
-import { DemoStore } from "./DemoStore";
+import { DemoStoreEnhanced } from "./DemoStoreEnhanced";
 import { Docs } from "./Docs";
+import { API_BASE_URL } from "../../config/api";
 
 interface YCDemoProps {
     onBack?: () => void;
@@ -154,18 +155,18 @@ export function YCDemo({ onBack }: YCDemoProps) {
                     >
                         {/* Interactive Demo */}
                         <motion.div
-                            className="p-6 bg-gradient-to-br from-purple-500/10 to-cyan-500/10 border border-purple-500/20 rounded-2xl cursor-pointer hover:border-purple-500/40 transition-colors"
+                            className="p-6 bg-gradient-to-br from-zinc-800/50 to-zinc-700/50 border border-zinc-700 rounded-2xl cursor-pointer hover:border-zinc-600 transition-colors"
                             whileHover={{ y: -4 }}
                             onClick={() => setActiveView("demo")}
                         >
-                            <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4">
-                                <Play className="w-6 h-6 text-purple-400" />
+                            <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-4">
+                                <Play className="w-6 h-6 text-zinc-400" />
                             </div>
                             <h3 className="text-xl font-semibold text-white mb-2">Interactive Demo</h3>
                             <p className="text-gray-400 mb-4">
                                 Watch AI agents make purchases with real-time authorization. Shows ALLOW/DENY decisions.
                             </p>
-                            <span className="text-purple-400 flex items-center gap-1 text-sm">
+                            <span className="text-zinc-400 flex items-center gap-1 text-sm">
                                 Launch Demo <ArrowRight className="w-4 h-4" />
                             </span>
                         </motion.div>
@@ -216,7 +217,7 @@ export function YCDemo({ onBack }: YCDemoProps) {
                             </div>
                             <h3 className="text-xl font-semibold text-white mb-2">Quick Links</h3>
                             <div className="space-y-2">
-                                <a href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white flex items-center gap-2 text-sm">
+                                <a href={`${API_BASE_URL}/docs`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white flex items-center gap-2 text-sm">
                                     <ExternalLink className="w-3 h-3" /> API Swagger Docs
                                 </a>
                                 <a href="https://dashboard.stripe.com/test/payments" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white flex items-center gap-2 text-sm">
@@ -271,7 +272,7 @@ export function YCDemo({ onBack }: YCDemoProps) {
 
     // Demo view
     if (activeView === "demo") {
-        return <DemoStore onBack={() => setActiveView("hub")} />;
+        return <DemoStoreEnhanced onBack={() => setActiveView("hub")} isYCMode={true} />;
     }
 
     // Docs view

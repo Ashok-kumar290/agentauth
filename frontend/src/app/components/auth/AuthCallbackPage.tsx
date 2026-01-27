@@ -132,11 +132,11 @@ export function AuthCallbackPage() {
     const getIcon = () => {
         switch (result.state) {
             case "loading":
-                return <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />;
+                return <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />;
             case "success":
                 return <CheckCircle2 className="w-8 h-8 text-green-400" />;
             case "password_recovery":
-                return <Lock className="w-8 h-8 text-blue-400" />;
+                return <Lock className="w-8 h-8 text-zinc-400" />;
             case "error":
                 return <AlertCircle className="w-8 h-8 text-red-400" />;
         }
@@ -145,13 +145,13 @@ export function AuthCallbackPage() {
     const getCardStyle = () => {
         switch (result.state) {
             case "loading":
-                return "from-purple-500/10 to-blue-500/10 border-purple-500/20";
+                return "bg-zinc-900/50 border-zinc-800";
             case "success":
-                return "from-green-500/10 to-emerald-500/10 border-green-500/20";
+                return "bg-green-500/5 border-green-500/20";
             case "password_recovery":
-                return "from-blue-500/10 to-cyan-500/10 border-blue-500/20";
+                return "bg-zinc-900/50 border-zinc-800";
             case "error":
-                return "from-red-500/10 to-orange-500/10 border-red-500/20";
+                return "bg-red-500/5 border-red-500/20";
         }
     };
 
@@ -169,31 +169,31 @@ export function AuthCallbackPage() {
     };
 
     return (
-        <section className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
+        <section className="min-h-screen flex items-center justify-center px-4 py-12 bg-black">
             <motion.div
                 className="w-full max-w-md text-center"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <div className={`bg-gradient-to-br ${getCardStyle()} border rounded-3xl p-8 backdrop-blur-xl`}>
-                    <div className={`w-16 h-16 bg-gradient-to-br ${getCardStyle()} rounded-full flex items-center justify-center mx-auto mb-6`}>
+                <div className={`${getCardStyle()} border rounded-3xl p-8 backdrop-blur-xl`}>
+                    <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
                         {getIcon()}
                     </div>
                     <h2 className="text-2xl font-bold text-white mb-2">{getTitle()}</h2>
-                    <p className="text-gray-400 mb-6">{result.message}</p>
+                    <p className="text-zinc-400 mb-6">{result.message}</p>
 
                     {result.state === "error" && (
                         <div className="space-y-3">
                             <a
                                 href="/reset-password"
-                                className="block w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90 transition-opacity"
+                                className="block w-full bg-white text-black px-6 py-3 rounded-xl font-medium hover:bg-zinc-200 transition-colors"
                             >
                                 <Mail className="w-4 h-4 inline mr-2" />
                                 Request New Link
                             </a>
                             <a
                                 href="/portal"
-                                className="block w-full bg-white/5 border border-white/10 text-white px-6 py-3 rounded-xl font-medium hover:bg-white/10 transition-colors"
+                                className="block w-full bg-zinc-800 border border-zinc-700 text-white px-6 py-3 rounded-xl font-medium hover:bg-zinc-700 transition-colors"
                             >
                                 Back to Login
                             </a>

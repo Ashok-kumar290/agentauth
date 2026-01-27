@@ -143,27 +143,27 @@ export function VerifyOtpPage({ email, phone, method, onVerified, onBack }: Veri
     };
 
     return (
-        <section className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
+        <section className="min-h-screen flex items-center justify-center px-4 py-12 bg-black">
             <motion.div
                 className="w-full max-w-md"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 rounded-full mb-4">
-                        <Shield className="w-4 h-4 text-purple-400" />
-                        <span className="text-purple-300 text-sm font-medium">Two-Factor Authentication</span>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full mb-4">
+                        <Shield className="w-4 h-4 text-zinc-400" />
+                        <span className="text-zinc-300 text-sm font-medium">Two-Factor Authentication</span>
                     </div>
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent mb-2">
+                    <h1 className="text-3xl font-bold text-white mb-2">
                         Enter Verification Code
                     </h1>
-                    <p className="text-gray-400">
+                    <p className="text-zinc-400">
                         We sent a 6-digit code to{" "}
-                        <span className="text-purple-400">{maskedDestination}</span>
+                        <span className="text-white">{maskedDestination}</span>
                     </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl">
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-8 backdrop-blur-xl shadow-2xl">
                     {error && (
                         <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center">
                             ⚠️ {error}
@@ -184,9 +184,9 @@ export function VerifyOtpPage({ email, phone, method, onVerified, onBack }: Veri
                                 onKeyDown={(e) => handleKeyDown(index, e)}
                                 onPaste={index === 0 ? handlePaste : undefined}
                                 disabled={isLoading}
-                                className={`w-12 h-14 text-center text-2xl font-bold bg-white/5 border rounded-xl text-white focus:outline-none transition-all ${digit
-                                        ? "border-purple-500/50"
-                                        : "border-white/10 focus:border-purple-500"
+                                className={`w-12 h-14 text-center text-2xl font-bold bg-zinc-900 border rounded-xl text-white focus:outline-none transition-all ${digit
+                                        ? "border-zinc-600"
+                                        : "border-zinc-800 focus:border-zinc-600"
                                     } disabled:opacity-50`}
                             />
                         ))}
@@ -196,7 +196,7 @@ export function VerifyOtpPage({ email, phone, method, onVerified, onBack }: Veri
                     <button
                         onClick={() => handleVerify(otp.join(""))}
                         disabled={isLoading || otp.some((d) => !d)}
-                        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 mb-4"
+                        className="w-full bg-white text-black py-3.5 rounded-xl font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mb-4"
                     >
                         {isLoading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -210,11 +210,11 @@ export function VerifyOtpPage({ email, phone, method, onVerified, onBack }: Veri
 
                     {/* Resend Code */}
                     <div className="text-center">
-                        <p className="text-gray-500 text-sm mb-2">Didn't receive the code?</p>
+                        <p className="text-zinc-500 text-sm mb-2">Didn't receive the code?</p>
                         <button
                             onClick={handleResend}
                             disabled={resendCooldown > 0 || isLoading}
-                            className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors text-sm"
+                            className="inline-flex items-center gap-2 text-white hover:text-zinc-300 disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors text-sm"
                         >
                             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
                             {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
@@ -222,7 +222,7 @@ export function VerifyOtpPage({ email, phone, method, onVerified, onBack }: Veri
                     </div>
 
                     {/* Method indicator */}
-                    <div className="mt-6 pt-6 border-t border-white/10 flex items-center justify-center gap-2 text-gray-500 text-sm">
+                    <div className="mt-6 pt-6 border-t border-zinc-800 flex items-center justify-center gap-2 text-zinc-500 text-sm">
                         {method === "email" ? (
                             <>
                                 <Mail className="w-4 h-4" />

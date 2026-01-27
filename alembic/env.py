@@ -15,6 +15,11 @@ from app.models.database import Base
 from app.models.consent import Consent
 from app.models.authorization import Authorization
 from app.models.audit import AuditLog
+from app.models.connected_accounts import ConnectedAccount
+from app.models.limits import SpendingLimit
+from app.models.subscription import Subscription
+from app.models.usage import UsageRecord
+from app.models.webhooks import Webhook, WebhookDelivery
 from app.config import get_settings
 
 # Alembic Config object

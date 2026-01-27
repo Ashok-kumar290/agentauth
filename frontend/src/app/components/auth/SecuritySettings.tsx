@@ -182,9 +182,9 @@ export function SecuritySettings({ user, onBack }: SecuritySettingsProps) {
 
     if (isLoading) {
         return (
-            <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
+            <section className="min-h-screen flex items-center justify-center bg-black">
                 <div className="text-center">
-                    <Loader2 className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-4" />
+                    <Loader2 className="w-8 h-8 text-zinc-500 animate-spin mx-auto mb-4" />
                     <p className="text-gray-400">Loading security settings...</p>
                 </div>
             </section>
@@ -192,7 +192,7 @@ export function SecuritySettings({ user, onBack }: SecuritySettingsProps) {
     }
 
     return (
-        <section className="min-h-screen px-4 py-12 bg-gradient-to-br from-[#0A0A0F] via-[#12121A] to-[#0A0A0F]">
+        <section className="min-h-screen px-4 py-12 bg-black">
             <div className="max-w-2xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
@@ -235,12 +235,12 @@ export function SecuritySettings({ user, onBack }: SecuritySettingsProps) {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-6 mb-6"
+                    className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 mb-6"
                 >
                     <div className="flex items-start justify-between mb-6">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 rounded-xl flex items-center justify-center">
-                                <Shield className="w-6 h-6 text-purple-400" />
+                            <div className="w-12 h-12 bg-gradient-to-br from-zinc-800 to-zinc-700 border border-zinc-700 rounded-xl flex items-center justify-center">
+                                <Shield className="w-6 h-6 text-zinc-400" />
                             </div>
                             <div>
                                 <h2 className="text-xl font-semibold text-white">Two-Factor Authentication</h2>
@@ -268,13 +268,13 @@ export function SecuritySettings({ user, onBack }: SecuritySettingsProps) {
                             <button
                                 onClick={() => setTwoFactorMethod("email")}
                                 className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${settings.twoFactorMethod === "email"
-                                        ? "bg-purple-500/10 border-purple-500/30"
+                                        ? "bg-zinc-800/50 border-zinc-700"
                                         : "bg-white/5 border-white/10 hover:border-white/20"
                                     }`}
                             >
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${settings.twoFactorMethod === "email" ? "bg-purple-500/20" : "bg-white/10"
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${settings.twoFactorMethod === "email" ? "bg-zinc-800" : "bg-white/10"
                                     }`}>
-                                    <Mail className={`w-5 h-5 ${settings.twoFactorMethod === "email" ? "text-purple-400" : "text-gray-400"}`} />
+                                    <Mail className={`w-5 h-5 ${settings.twoFactorMethod === "email" ? "text-zinc-400" : "text-gray-400"}`} />
                                 </div>
                                 <div className="text-left flex-1">
                                     <p className={`font-medium ${settings.twoFactorMethod === "email" ? "text-white" : "text-gray-300"}`}>
@@ -291,13 +291,13 @@ export function SecuritySettings({ user, onBack }: SecuritySettingsProps) {
                             <button
                                 onClick={() => setTwoFactorMethod("sms")}
                                 className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${settings.twoFactorMethod === "sms"
-                                        ? "bg-purple-500/10 border-purple-500/30"
+                                        ? "bg-zinc-800/50 border-zinc-700"
                                         : "bg-white/5 border-white/10 hover:border-white/20"
                                     }`}
                             >
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${settings.twoFactorMethod === "sms" ? "bg-purple-500/20" : "bg-white/10"
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${settings.twoFactorMethod === "sms" ? "bg-zinc-800" : "bg-white/10"
                                     }`}>
-                                    <Phone className={`w-5 h-5 ${settings.twoFactorMethod === "sms" ? "text-purple-400" : "text-gray-400"}`} />
+                                    <Phone className={`w-5 h-5 ${settings.twoFactorMethod === "sms" ? "text-zinc-400" : "text-gray-400"}`} />
                                 </div>
                                 <div className="text-left flex-1">
                                     <p className={`font-medium ${settings.twoFactorMethod === "sms" ? "text-white" : "text-gray-300"}`}>

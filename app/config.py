@@ -1,18 +1,24 @@
 """
 AgentAuth Configuration
+
+All secrets MUST be provided via environment variables.
+No default values for production-critical settings.
 """
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from functools import lru_cache
+from typing import Optional, List
+import os
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
-    # Database
+    # Database (REQUIRED)
     database_url: str = "postgresql+asyncpg://localhost:5432/agentauth"
     
-    # Security
-    secret_key: str = "dev-secret-key-change-in-production"
+    # Security (REQUIRED in production)
+    secret_key: str = ""  # No default - must be set
     
     # Token settings
     token_expiry_seconds: int = 3600  # 1 hour
@@ -21,6 +27,11 @@ class Settings(BaseSettings):
     # Application
     debug: bool = False
     environment: str = "development"
+    log_level: str = "INFO"
+    log_json: bool = False  # True for production
+    
+    # CORS - comma-separated list of allowed origins
+    allowed_origins: str = "http://localhost:3000,http://localhost:5173"
     
     # JWT settings
     jwt_algorithm: str = "HS256"
@@ -32,9 +43,9 @@ class Settings(BaseSettings):
     stripe_price_pro: str = ""
     stripe_price_enterprise: str = ""
     
-    # Admin panel settings
-    admin_password: str = "agentauth2026"  # Change in production!
-    admin_jwt_secret: str = "admin-secret-change-in-production"
+    # Admin panel settings (REQUIRED in production)
+    admin_password: str = ""  # No default - must be set
+    admin_jwt_secret: str = ""  # No default - must be set
     admin_token_expiry: int = 3600  # 1 hour
     
     # Redis settings
@@ -50,6 +61,33 @@ class Settings(BaseSettings):
     # Caching
     cache_ttl_seconds: int = 300  # 5 minutes default
     cache_consent_ttl: int = 600  # 10 minutes for consents
+    
+    # Monitoring
+    sentry_dsn: str = ""  # Optional - for error tracking
+    
+    @field_validator("secret_key", "admin_password", "admin_jwt_secret")
+    @classmethod
+    def validate_secrets_in_production(cls, v: str, info) -> str:
+        """Ensure secrets are set in production."""
+        env = os.getenv("ENVIRONMENT", "development")
+        if env == "production" and not v:
+            raise ValueError(
+                f"{info.field_name} must be set in production environment"
+            )
+        # Provide dev defaults only in development
+        if not v and env != "production":
+            defaults = {
+                "secret_key": "dev-secret-key-not-for-production",
+                "admin_password": "agentauth2026",
+                "admin_jwt_secret": "dev-admin-secret-not-for-production",
+            }
+            return defaults.get(info.field_name, "")
+        return v
+    
+    @property
+    def cors_origins(self) -> List[str]:
+        """Parse CORS origins from comma-separated string."""
+        return [origin.strip() for origin in self.allowed_origins.split(",")]
     
     class Config:
         env_file = ".env"

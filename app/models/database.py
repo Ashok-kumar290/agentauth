@@ -1,5 +1,10 @@
 """
 Database connection and session management
+
+OPTIMIZED for low-latency authorization:
+- Connection pooling (5-20 connections)
+- Pool pre-ping for connection health
+- Fast timeout settings
 """
 import ssl
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -32,12 +37,18 @@ elif not db_url.startswith("postgresql+asyncpg://"):
 
 print(f"Database URL (masked): {db_url[:30]}...{db_url[-20:]}")
 
-# Create async engine with SSL
+# Create async engine with OPTIMIZED connection pooling
 engine = create_async_engine(
     db_url,
     echo=settings.debug,
     future=True,
     connect_args={"ssl": ssl_context},
+    # Connection pool settings for low latency
+    pool_size=5,           # Minimum connections to keep ready
+    max_overflow=15,       # Allow up to 20 total connections
+    pool_pre_ping=False,   # Disabled - causes issues with Neon pooler
+    pool_recycle=300,      # Recycle connections every 5 mins
+    pool_timeout=10,       # Wait max 10s for connection
 )
 
 # Create async session factory

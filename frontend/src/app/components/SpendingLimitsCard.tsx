@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { DollarSign, TrendingUp, AlertTriangle, Save, RefreshCw } from "lucide-react";
+import { API_BASE_URL } from "../../config/api";
 
-const API_BASE = window.location.hostname === "localhost"
-    ? "http://localhost:8000"
-    : "https://agentauth.railway.app";
+const API_BASE = API_BASE_URL;
 
 interface SpendingLimitsData {
     daily_limit: string;

@@ -10,49 +10,91 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from app.config import get_settings
+from app.logging_config import setup_logging, api_logger
 from app.api import consents_router, authorize_router, verify_router, payments_router, dashboard_router, admin_router, limits_router, rules_router, analytics_router, webhooks_router, billing_router
+from app.api.connect import router as connect_router
 from app.models.database import init_db
 from app.middleware import RateLimitMiddleware, IdempotencyMiddleware, TenantContextMiddleware, generate_api_key, DEMO_KEY
 from app.services.cache_service import close_redis, get_cache_service
 
 settings = get_settings()
 
+# Initialize logging first
+setup_logging(
+    level=settings.log_level,
+    json_format=settings.log_json or settings.environment == "production"
+)
+
+# Initialize Sentry for error tracking (optional)
+if settings.sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+        
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.environment,
+            traces_sample_rate=0.1,  # 10% of transactions
+            integrations=[
+                FastApiIntegration(),
+                SqlalchemyIntegration(),
+            ],
+        )
+        api_logger.info("Sentry error tracking initialized")
+    except ImportError:
+        api_logger.warning("sentry-sdk not installed, error tracking disabled")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler - startup and shutdown."""
+    api_logger.info("Starting AgentAuth API...")
+    
     # Startup: Initialize database tables
     # Note: In production, use Alembic migrations instead
     try:
         if settings.debug:
             await init_db()
+            api_logger.info("Database tables initialized")
     except Exception as e:
-        print(f"Warning: Database init failed: {e}")
+        api_logger.warning(f"Database init failed: {e}")
         # Continue anyway - API will work but DB operations will fail
     
     # Initialize Redis connection (optional - will fail gracefully if unavailable)
     try:
         cache = get_cache_service()
-        print("Redis cache service initialized")
+        api_logger.info("Redis cache service initialized")
     except Exception as e:
-        print(f"Warning: Redis init failed (will use in-memory fallback): {e}")
+        api_logger.warning(f"Redis init failed (using in-memory fallback): {e}")
     
     # Initialize OpenTelemetry tracing (optional)
     try:
         from app.tracing import init_tracing
         init_tracing(app, service_name="agentauth")
-        print("OpenTelemetry tracing initialized")
+        api_logger.info("OpenTelemetry tracing initialized")
     except Exception as e:
-        print(f"Warning: Tracing init failed: {e}")
+        api_logger.debug(f"Tracing init skipped: {e}")
     
+    # Start background worker for async auth queue flushing
+    try:
+        from app.services.auth_service import start_background_worker
+        start_background_worker()
+        api_logger.info("Authorization background worker started")
+    except Exception as e:
+        api_logger.warning(f"Background worker failed: {e}")
+    
+    api_logger.info("AgentAuth API started successfully")
     yield
     
-    # Shutdown: Close Redis connection
+    # Shutdown
+    api_logger.info("Shutting down AgentAuth API...")
     try:
         await close_redis()
-        print("Redis connection closed")
+        api_logger.info("Redis connection closed")
     except Exception:
         pass
+    api_logger.info("AgentAuth API shutdown complete")
 
 
 
@@ -112,12 +154,18 @@ app.add_middleware(IdempotencyMiddleware)
 
 # Add tenant context middleware for RLS
 app.add_middleware(TenantContextMiddleware)
-# Configure CORS
+
+# Configure CORS with proper origins
+allowed_origins = settings.cors_origins
+if settings.debug:
+    # In development, allow all origins
+    allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -134,6 +182,7 @@ app.include_router(rules_router)
 app.include_router(analytics_router)
 app.include_router(webhooks_router)
 app.include_router(billing_router)
+app.include_router(connect_router)
 
 
 @app.get("/", tags=["Root"])
@@ -150,8 +199,55 @@ async def root():
 
 @app.get("/health", tags=["Health"])
 async def health():
-    """Health check endpoint."""
+    """Basic health check endpoint for load balancers."""
     return {"status": "healthy"}
+
+
+@app.get("/health/detailed", tags=["Health"])
+async def health_detailed():
+    """Detailed health check with component status."""
+    from app.models.database import async_engine
+    from app.services.cache_service import get_cache_service
+    from sqlalchemy import text
+    import time
+    
+    checks = {
+        "api": {"status": "healthy", "latency_ms": 0},
+        "database": {"status": "unknown", "latency_ms": 0},
+        "cache": {"status": "unknown", "latency_ms": 0},
+    }
+    overall_status = "healthy"
+    
+    # Check database
+    try:
+        start = time.perf_counter()
+        async with async_engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        checks["database"]["latency_ms"] = round((time.perf_counter() - start) * 1000, 2)
+        checks["database"]["status"] = "healthy"
+    except Exception as e:
+        checks["database"]["status"] = "unhealthy"
+        checks["database"]["error"] = str(e)
+        overall_status = "degraded"
+    
+    # Check Redis cache
+    try:
+        start = time.perf_counter()
+        cache = get_cache_service()
+        await cache.ping()
+        checks["cache"]["latency_ms"] = round((time.perf_counter() - start) * 1000, 2)
+        checks["cache"]["status"] = "healthy"
+    except Exception as e:
+        checks["cache"]["status"] = "unavailable"
+        checks["cache"]["error"] = str(e)
+        # Cache is optional, don't degrade status
+    
+    return {
+        "status": overall_status,
+        "version": "0.2.0",
+        "environment": settings.environment,
+        "checks": checks,
+    }
 
 
 @app.post("/v1/api-keys", tags=["API Keys"])

@@ -192,8 +192,8 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
                 </p>
 
                 <div className="grid md:grid-cols-3 gap-4 my-8">
-                    <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
-                        <Shield className="w-8 h-8 text-purple-400 mb-3" />
+                    <div className="p-4 bg-zinc-800/50 border border-zinc-700 rounded-xl">
+                        <Shield className="w-8 h-8 text-zinc-400 mb-3" />
                         <h4 className="text-white font-semibold mb-2">User Control</h4>
                         <p className="text-gray-400 text-sm">Users set limits and rules for what their AI agents can purchase.</p>
                     </div>
@@ -212,28 +212,28 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
                 <h3 className="text-xl font-semibold text-white mt-8 mb-4">How It Works</h3>
                 <ol className="space-y-4">
                     <li className="flex gap-4">
-                        <span className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold flex-shrink-0">1</span>
+                        <span className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold flex-shrink-0">1</span>
                         <div>
                             <p className="text-white font-medium">User Creates Consent</p>
                             <p className="text-gray-400 text-sm">Define spending limits, allowed merchants, and transaction rules.</p>
                         </div>
                     </li>
                     <li className="flex gap-4">
-                        <span className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold flex-shrink-0">2</span>
+                        <span className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold flex-shrink-0">2</span>
                         <div>
                             <p className="text-white font-medium">AI Agent Requests Authorization</p>
                             <p className="text-gray-400 text-sm">Agent sends transaction details to AgentAuth for approval.</p>
                         </div>
                     </li>
                     <li className="flex gap-4">
-                        <span className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold flex-shrink-0">3</span>
+                        <span className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold flex-shrink-0">3</span>
                         <div>
                             <p className="text-white font-medium">AgentAuth Evaluates</p>
                             <p className="text-gray-400 text-sm">Checks against spending limits, merchant rules, and category filters.</p>
                         </div>
                     </li>
                     <li className="flex gap-4">
-                        <span className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold flex-shrink-0">4</span>
+                        <span className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold flex-shrink-0">4</span>
                         <div>
                             <p className="text-white font-medium">Merchant Verifies</p>
                             <p className="text-gray-400 text-sm">Merchant confirms authorization code before processing payment.</p>
@@ -257,7 +257,7 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
                 {/* Step 1: Install */}
                 <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
                     <div className="flex items-center gap-3 mb-4">
-                        <span className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center text-purple-400 font-bold">1</span>
+                        <span className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-400 font-bold">1</span>
                         <h3 className="text-xl font-semibold text-white">Install the SDK</h3>
                         <span className="text-gray-500 text-sm">~30 seconds</span>
                     </div>
@@ -269,11 +269,11 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
                 {/* Step 2: Get API Key */}
                 <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
                     <div className="flex items-center gap-3 mb-4">
-                        <span className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center text-purple-400 font-bold">2</span>
+                        <span className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-400 font-bold">2</span>
                         <h3 className="text-xl font-semibold text-white">Get Your API Key</h3>
                         <span className="text-gray-500 text-sm">~1 minute</span>
                     </div>
-                    <p className="text-gray-400 mb-3">Sign up at <a href="#" className="text-purple-400 hover:underline">agentauth.in</a> to get your API key.</p>
+                    <p className="text-gray-400 mb-3">Sign up at <a href="#" className="text-zinc-400 hover:underline">agentauth.in</a> to get your API key.</p>
                     <div className="bg-[#0d0d12] rounded-lg p-4 font-mono text-sm">
                         <span className="text-gray-500"># Set your environment variable</span><br />
                         <span className="text-cyan-400">export</span> <span className="text-white">AGENTAUTH_API_KEY=</span><span className="text-yellow-400">"aa_live_..."</span>
@@ -283,7 +283,7 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
                 {/* Step 3: Initialize */}
                 <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
                     <div className="flex items-center gap-3 mb-4">
-                        <span className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center text-purple-400 font-bold">3</span>
+                        <span className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-400 font-bold">3</span>
                         <h3 className="text-xl font-semibold text-white">Create a Consent</h3>
                         <span className="text-gray-500 text-sm">~2 minutes</span>
                     </div>
@@ -293,7 +293,7 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
                 {/* Step 4: Authorize */}
                 <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
                     <div className="flex items-center gap-3 mb-4">
-                        <span className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center text-purple-400 font-bold">4</span>
+                        <span className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-400 font-bold">4</span>
                         <h3 className="text-xl font-semibold text-white">Authorize a Transaction</h3>
                         <span className="text-gray-500 text-sm">~1 minute</span>
                     </div>
@@ -301,11 +301,11 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
                 </div>
 
                 {/* What's Next */}
-                <div className="p-6 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border border-purple-500/20 rounded-xl">
+                <div className="p-6 bg-gradient-to-r from-zinc-800/50 to-zinc-800/30 border border-zinc-700 rounded-xl">
                     <h3 className="text-lg font-semibold text-white mb-3">🎉 You're ready!</h3>
                     <p className="text-gray-400 mb-4">That's it! Your AI agent can now make authorized purchases within user-defined limits.</p>
                     <div className="flex flex-wrap gap-3">
-                        <a href="/demo" className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition-colors">
+                        <a href="/demo" className="px-4 py-2 bg-zinc-800 text-zinc-400 rounded-lg text-sm hover:bg-zinc-700 transition-colors">
                             Try the Demo →
                         </a>
                         <a href="#" className="px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 transition-colors">
@@ -323,7 +323,7 @@ const DOCS_CONTENT: Record<string, { title: string; description: string; content
             <div className="space-y-6">
                 <p className="text-gray-300">
                     AgentAuth uses API keys for authentication. You can get your API keys from the
-                    <a href="/portal" className="text-purple-400 hover:text-purple-300 ml-1">Developer Portal</a>.
+                    <a href="/portal" className="text-zinc-400 hover:text-zinc-300 ml-1">Developer Portal</a>.
                 </p>
 
                 <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
@@ -411,7 +411,7 @@ export function Docs({ onBack }: DocsProps) {
                             <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">⌘K</kbd>
                         </div>
 
-                        <a href="/demo" className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition-colors">
+                        <a href="/demo" className="px-4 py-2 bg-zinc-800 text-zinc-400 rounded-lg text-sm hover:bg-zinc-700 transition-colors">
                             Try Demo
                         </a>
 
@@ -451,7 +451,7 @@ export function Docs({ onBack }: DocsProps) {
                                                     setSidebarOpen(false);
                                                 }}
                                                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeSection === item.id
-                                                    ? "bg-purple-500/20 text-purple-400 font-medium"
+                                                    ? "bg-zinc-800 text-zinc-400 font-medium"
                                                     : "text-gray-400 hover:text-white hover:bg-white/5"
                                                     }`}
                                             >
@@ -507,7 +507,7 @@ export function Docs({ onBack }: DocsProps) {
                                             key={index}
                                             onClick={() => setActiveCodeTab(index)}
                                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeCodeTab === index
-                                                ? "bg-purple-500/20 text-purple-400"
+                                                ? "bg-zinc-800 text-zinc-400"
                                                 : "text-gray-400 hover:text-white hover:bg-white/5"
                                                 }`}
                                         >
@@ -546,7 +546,7 @@ export function Docs({ onBack }: DocsProps) {
                             <a href="#" className="text-gray-400 hover:text-white transition-colors">
                                 ← Previous
                             </a>
-                            <a href="#" className="text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1">
+                            <a href="#" className="text-zinc-400 hover:text-zinc-300 transition-colors flex items-center gap-1">
                                 Next <ChevronRight className="w-4 h-4" />
                             </a>
                         </div>
@@ -571,9 +571,9 @@ export function Docs({ onBack }: DocsProps) {
                         </li>
                     </ul>
 
-                    <div className="mt-8 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                    <div className="mt-8 p-4 bg-zinc-800/50 border border-zinc-700 rounded-xl">
                         <p className="text-sm text-gray-400 mb-3">Need help?</p>
-                        <a href="#" className="text-purple-400 text-sm hover:text-purple-300 flex items-center gap-1">
+                        <a href="#" className="text-zinc-400 text-sm hover:text-zinc-300 flex items-center gap-1">
                             Join our Discord <ExternalLink className="w-3 h-3" />
                         </a>
                     </div>

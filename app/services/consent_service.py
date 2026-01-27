@@ -89,6 +89,18 @@ class ConsentService:
         db.add(consent)
         await db.flush()  # Get the ID without committing
         
+        # PRE-WARM the authorization cache so first auth is instant
+        from app.services.auth_service import _consent_cache
+        cache_data = {
+            "consent_id": consent_id,
+            "user_id": consent_data.user_id,
+            "is_active": True,
+            "revoked_at": None,
+            "expires_at": str(expires_at),
+            "constraints": constraints,
+        }
+        _consent_cache[consent_id] = (cache_data, datetime.utcnow())
+        
         # Generate delegation token
         delegation_token = token_service.create_delegation_token(
             consent_id=consent_id,

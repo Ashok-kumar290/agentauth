@@ -180,3 +180,167 @@ def verify_webhook_signature(payload: bytes, sig_header: str) -> dict:
         return event
     except stripe.error.SignatureVerificationError:
         raise ValueError("Invalid webhook signature")
+
+
+# ============ Stripe Connect Functions ============
+
+class ConnectAccountResponse(BaseModel):
+    """Stripe Connect account response."""
+    account_id: str
+    onboarding_url: Optional[str] = None
+    details_submitted: bool = False
+    charges_enabled: bool = False
+    payouts_enabled: bool = False
+
+
+async def create_connect_account(
+    user_id: str,
+    email: str,
+    country: str = "US",
+    account_type: str = "express",
+) -> ConnectAccountResponse:
+    """
+    Create a Stripe Connect account for a user.
+    
+    Args:
+        user_id: Internal user ID
+        email: User's email
+        country: Two-letter country code
+        account_type: 'express', 'standard', or 'custom'
+    
+    Returns:
+        ConnectAccountResponse with account details
+    """
+    account = stripe.Account.create(
+        type=account_type,
+        country=country,
+        email=email,
+        metadata={"user_id": user_id},
+        capabilities={
+            "card_payments": {"requested": True},
+            "transfers": {"requested": True},
+        },
+    )
+    
+    return ConnectAccountResponse(
+        account_id=account.id,
+        details_submitted=account.details_submitted,
+        charges_enabled=account.charges_enabled,
+        payouts_enabled=account.payouts_enabled,
+    )
+
+
+async def create_connect_onboarding_link(
+    account_id: str,
+    return_url: str,
+    refresh_url: str,
+) -> str:
+    """
+    Create an onboarding link for a Stripe Connect account.
+    
+    Args:
+        account_id: Stripe Connect account ID
+        return_url: URL to redirect after onboarding
+        refresh_url: URL to redirect if link expires
+    
+    Returns:
+        Onboarding URL
+    """
+    account_link = stripe.AccountLink.create(
+        account=account_id,
+        refresh_url=refresh_url,
+        return_url=return_url,
+        type="account_onboarding",
+    )
+    return account_link.url
+
+
+async def get_connect_account(account_id: str) -> ConnectAccountResponse:
+    """
+    Get details of a Stripe Connect account.
+    
+    Args:
+        account_id: Stripe Connect account ID
+    
+    Returns:
+        ConnectAccountResponse with current status
+    """
+    account = stripe.Account.retrieve(account_id)
+    return ConnectAccountResponse(
+        account_id=account.id,
+        details_submitted=account.details_submitted,
+        charges_enabled=account.charges_enabled,
+        payouts_enabled=account.payouts_enabled,
+    )
+
+
+async def create_connect_login_link(account_id: str) -> str:
+    """
+    Create a login link for a connected account's Stripe dashboard.
+    
+    Args:
+        account_id: Stripe Connect account ID
+    
+    Returns:
+        Dashboard login URL
+    """
+    login_link = stripe.Account.create_login_link(account_id)
+    return login_link.url
+
+
+async def list_connect_transactions(
+    account_id: str,
+    limit: int = 20,
+) -> list:
+    """
+    List recent transactions for a connected account.
+    
+    Args:
+        account_id: Stripe Connect account ID
+        limit: Maximum number of transactions
+    
+    Returns:
+        List of transaction objects
+    """
+    charges = stripe.Charge.list(
+        limit=limit,
+        stripe_account=account_id,
+    )
+    
+    transactions = []
+    for charge in charges.data:
+        transactions.append({
+            "id": charge.id,
+            "amount": charge.amount / 100,  # Convert from cents
+            "currency": charge.currency.upper(),
+            "status": charge.status,
+            "description": charge.description or "No description",
+            "created_at": charge.created,
+            "merchant": charge.metadata.get("merchant", "Unknown"),
+        })
+    
+    return transactions
+
+
+async def get_connect_balance(account_id: str) -> dict:
+    """
+    Get the balance for a connected account.
+    
+    Args:
+        account_id: Stripe Connect account ID
+    
+    Returns:
+        Balance details
+    """
+    balance = stripe.Balance.retrieve(stripe_account=account_id)
+    
+    return {
+        "available": [
+            {"amount": b.amount / 100, "currency": b.currency}
+            for b in balance.available
+        ],
+        "pending": [
+            {"amount": b.amount / 100, "currency": b.currency}
+            for b in balance.pending
+        ],
+    }
