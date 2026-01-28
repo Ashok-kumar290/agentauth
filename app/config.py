@@ -2,13 +2,22 @@
 AgentAuth Configuration
 
 All secrets MUST be provided via environment variables.
-No default values for production-critical settings.
+Auto-generates secure defaults if not set (for easier deployment).
 """
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
 from functools import lru_cache
 from typing import Optional, List
 import os
+import secrets
+
+
+# Generate secure runtime defaults (persists for app lifetime)
+_RUNTIME_SECRETS = {
+    "secret_key": secrets.token_urlsafe(32),
+    "admin_password": secrets.token_urlsafe(24),
+    "admin_jwt_secret": secrets.token_urlsafe(32),
+}
 
 
 class Settings(BaseSettings):
@@ -17,8 +26,8 @@ class Settings(BaseSettings):
     # Database (REQUIRED)
     database_url: str = "postgresql+asyncpg://localhost:5432/agentauth"
     
-    # Security (REQUIRED in production)
-    secret_key: str = ""  # No default - must be set
+    # Security - auto-generated if not set
+    secret_key: str = ""
     
     # Token settings
     token_expiry_seconds: int = 3600  # 1 hour
@@ -31,7 +40,7 @@ class Settings(BaseSettings):
     log_json: bool = False  # True for production
     
     # CORS - comma-separated list of allowed origins
-    allowed_origins: str = "http://localhost:3000,http://localhost:5173"
+    allowed_origins: str = "http://localhost:3000,http://localhost:5173,https://agentauth.in,https://www.agentauth.in"
     
     # JWT settings
     jwt_algorithm: str = "HS256"
@@ -43,9 +52,9 @@ class Settings(BaseSettings):
     stripe_price_pro: str = ""
     stripe_price_enterprise: str = ""
     
-    # Admin panel settings (REQUIRED in production)
-    admin_password: str = ""  # No default - must be set
-    admin_jwt_secret: str = ""  # No default - must be set
+    # Admin panel settings - auto-generated if not set
+    admin_password: str = ""
+    admin_jwt_secret: str = ""
     admin_token_expiry: int = 3600  # 1 hour
     
     # Redis settings
@@ -67,21 +76,11 @@ class Settings(BaseSettings):
     
     @field_validator("secret_key", "admin_password", "admin_jwt_secret")
     @classmethod
-    def validate_secrets_in_production(cls, v: str, info) -> str:
-        """Ensure secrets are set in production."""
-        env = os.getenv("ENVIRONMENT", "development")
-        if env == "production" and not v:
-            raise ValueError(
-                f"{info.field_name} must be set in production environment"
-            )
-        # Provide dev defaults only in development
-        if not v and env != "production":
-            defaults = {
-                "secret_key": "dev-secret-key-not-for-production",
-                "admin_password": "agentauth2026",
-                "admin_jwt_secret": "dev-admin-secret-not-for-production",
-            }
-            return defaults.get(info.field_name, "")
+    def validate_secrets(cls, v: str, info) -> str:
+        """Auto-generate secrets if not provided."""
+        if not v:
+            # Use runtime-generated secure defaults
+            return _RUNTIME_SECRETS.get(info.field_name, secrets.token_urlsafe(32))
         return v
     
     @property
