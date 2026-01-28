@@ -343,6 +343,24 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectError, setConnectError] = useState("");
 
+    // API Keys state
+    const [apiKeys, setApiKeys] = useState<{ id: string; name: string; key: string; created: string; lastUsed: string; isLive: boolean }[]>([]);
+    const [newKeyName, setNewKeyName] = useState("");
+    const [newKeyType, setNewKeyType] = useState<"live" | "test">("live");
+    const [isCreatingKey, setIsCreatingKey] = useState(false);
+    const [showKeySecret, setShowKeySecret] = useState<string | null>(null);
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+    // Transactions state
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [transactionsLoading, setTransactionsLoading] = useState(false);
+    const [transactionsTotal, setTransactionsTotal] = useState(0);
+    const [transactionsPage, setTransactionsPage] = useState(1);
+
+    // Consents state
+    const [consents, setConsents] = useState<any[]>([]);
+    const [consentsLoading, setConsentsLoading] = useState(false);
+
     // Check backend health on mount
     useEffect(() => {
         const checkBackend = async () => {
@@ -560,6 +578,117 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
             window.location.href = "/";
         }
     };
+
+    // Generate API Key
+    const handleCreateApiKey = async () => {
+        if (!newKeyName.trim()) return;
+        
+        setIsCreatingKey(true);
+        try {
+            // Generate key locally (in production, this would be a backend call)
+            const prefix = newKeyType === "live" ? "aa_live_sk_" : "aa_test_sk_";
+            const randomPart = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+            const keyValue = prefix + randomPart;
+            
+            const newKey = {
+                id: `key_${Date.now()}`,
+                name: newKeyName.trim(),
+                key: keyValue,
+                created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                lastUsed: "Never",
+                isLive: newKeyType === "live",
+            };
+            
+            const updatedKeys = [...apiKeys, newKey];
+            setApiKeys(updatedKeys);
+            localStorage.setItem("agentauth_api_keys", JSON.stringify(updatedKeys));
+            setNewKeyName("");
+            setShowKeySecret(keyValue); // Show the key once
+        } catch (error) {
+            console.error("Failed to create API key:", error);
+        } finally {
+            setIsCreatingKey(false);
+        }
+    };
+
+    // Copy API Key to clipboard
+    const handleCopyKey = async (key: string) => {
+        try {
+            await navigator.clipboard.writeText(key);
+            setCopiedKey(key);
+            setTimeout(() => setCopiedKey(null), 2000);
+        } catch (error) {
+            console.error("Failed to copy:", error);
+        }
+    };
+
+    // Delete API Key
+    const handleDeleteKey = (keyId: string) => {
+        const updatedKeys = apiKeys.filter(k => k.id !== keyId);
+        setApiKeys(updatedKeys);
+        localStorage.setItem("agentauth_api_keys", JSON.stringify(updatedKeys));
+    };
+
+    // Fetch transactions from backend
+    const fetchTransactions = async (page: number = 1) => {
+        setTransactionsLoading(true);
+        try {
+            const limit = 10;
+            const offset = (page - 1) * limit;
+            const response = await fetch(`${BACKEND_URL}/v1/dashboard/transactions?limit=${limit}&offset=${offset}`, {
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setTransactions(data.transactions || []);
+                setTransactionsTotal(data.total || 0);
+                setTransactionsPage(page);
+            }
+        } catch (error) {
+            console.error("Failed to fetch transactions:", error);
+        } finally {
+            setTransactionsLoading(false);
+        }
+    };
+
+    // Fetch consents from backend
+    const fetchConsents = async () => {
+        setConsentsLoading(true);
+        try {
+            const response = await fetch(`${BACKEND_URL}/v1/consents?limit=50`, {
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setConsents(data.consents || data || []);
+            }
+        } catch (error) {
+            console.error("Failed to fetch consents:", error);
+        } finally {
+            setConsentsLoading(false);
+        }
+    };
+
+    // Load API keys from localStorage
+    useEffect(() => {
+        const storedKeys = localStorage.getItem("agentauth_api_keys");
+        if (storedKeys) {
+            try {
+                setApiKeys(JSON.parse(storedKeys));
+            } catch (e) {}
+        }
+    }, []);
+
+    // Fetch transactions when viewing that page
+    useEffect(() => {
+        if (activeNav === "transactions") {
+            fetchTransactions(1);
+        } else if (activeNav === "consents") {
+            fetchConsents();
+        }
+    }, [activeNav]);
 
     // Format currency
     const formatCurrency = (amount: number) => {
@@ -1087,8 +1216,8 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 transition={{ duration: 0.2 }}
                             >
                                 {/* Filters */}
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="flex-1 relative">
+                                <div className="flex items-center gap-4 mb-6 flex-wrap">
+                                    <div className="flex-1 min-w-[200px] relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                         <input
                                             type="text"
@@ -1099,94 +1228,98 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                     <select className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none">
                                         <option>All Status</option>
                                         <option>Authorized</option>
-                                        <option>Denied</option>
-                                        <option>Pending</option>
+                                        <option>Expired</option>
                                     </select>
-                                    <select className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none">
-                                        <option>Last 7 days</option>
-                                        <option>Last 30 days</option>
-                                        <option>Last 90 days</option>
-                                        <option>All time</option>
-                                    </select>
-                                    <button className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">
-                                        <Download className="w-4 h-4" />
-                                        Export
+                                    <button 
+                                        onClick={() => fetchTransactions(1)}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10"
+                                    >
+                                        <RefreshCw className={`w-4 h-4 ${transactionsLoading ? 'animate-spin' : ''}`} />
+                                        Refresh
                                     </button>
                                 </div>
 
                                 {/* Transactions Table */}
                                 <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr className="border-b border-[#222] bg-[#0d0d0d] text-left">
-                                                <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction ID</th>
-                                                <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th>
-                                                <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Merchant</th>
-                                                <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                                <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                                <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                                                <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {[
-                                                { id: "txn_1a2b3c4d5e6f", agent: "procurement-bot", merchant: "AWS", amount: 1249.99, status: "authorized", time: "2 min ago" },
-                                                { id: "txn_2b3c4d5e6f7g", agent: "expense-agent", merchant: "Stripe", amount: 499.00, status: "authorized", time: "15 min ago" },
-                                                { id: "txn_3c4d5e6f7g8h", agent: "travel-assistant", merchant: "United Airlines", amount: 2847.50, status: "pending", time: "32 min ago" },
-                                                { id: "txn_4d5e6f7g8h9i", agent: "procurement-bot", merchant: "Gambling Site", amount: 500.00, status: "denied", time: "1 hr ago" },
-                                                { id: "txn_5e6f7g8h9i0j", agent: "subscription-mgr", merchant: "OpenAI", amount: 200.00, status: "authorized", time: "2 hr ago" },
-                                                { id: "txn_6f7g8h9i0j1k", agent: "inventory-bot", merchant: "Shopify", amount: 79.00, status: "authorized", time: "3 hr ago" },
-                                                { id: "txn_7g8h9i0j1k2l", agent: "expense-agent", merchant: "GitHub", amount: 44.00, status: "authorized", time: "5 hr ago" },
-                                                { id: "txn_8h9i0j1k2l3m", agent: "travel-assistant", merchant: "Marriott", amount: 892.00, status: "authorized", time: "6 hr ago" },
-                                            ].map((tx, i) => (
-                                                <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
-                                                    <td className="py-3.5 px-4">
-                                                        <code className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded">{tx.id}</code>
-                                                    </td>
-                                                    <td className="py-3.5 px-4">
-                                                        <code className="text-cyan-400 text-sm">{tx.agent}</code>
-                                                    </td>
-                                                    <td className="py-3.5 px-4 text-white text-sm">{tx.merchant}</td>
-                                                    <td className="py-3.5 px-4 text-white font-medium">${tx.amount.toFixed(2)}</td>
-                                                    <td className="py-3.5 px-4">
-                                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                                                            tx.status === "authorized" ? "bg-emerald-500/10 text-emerald-500" :
-                                                            tx.status === "denied" ? "bg-red-500/10 text-red-500" :
-                                                            "bg-yellow-500/10 text-yellow-500"
-                                                        }`}>
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                            {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3.5 px-4 text-gray-500 text-sm">{tx.time}</td>
-                                                    <td className="py-3.5 px-4">
-                                                        <button className="p-2 hover:bg-white/5 rounded-lg">
-                                                            <MoreVertical className="w-4 h-4 text-gray-500" />
-                                                        </button>
-                                                    </td>
+                                    {transactionsLoading ? (
+                                        <div className="p-8 text-center">
+                                            <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-4" />
+                                            <p className="text-gray-500">Loading transactions...</p>
+                                        </div>
+                                    ) : transactions.length === 0 ? (
+                                        <div className="p-8 text-center">
+                                            <Shield className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                            <h3 className="text-white font-medium mb-2">No Transactions Yet</h3>
+                                            <p className="text-gray-500 text-sm">Transactions will appear here once your agents start making authorized requests.</p>
+                                        </div>
+                                    ) : (
+                                        <table className="w-full">
+                                            <thead>
+                                                <tr className="border-b border-[#222] bg-[#0d0d0d] text-left">
+                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Intent</th>
+                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {transactions.map((tx, i) => (
+                                                    <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                                        <td className="py-3.5 px-4">
+                                                            <code className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded">
+                                                                {tx.id?.substring(0, 16)}...
+                                                            </code>
+                                                        </td>
+                                                        <td className="py-3.5 px-4 text-white text-sm max-w-[200px] truncate">
+                                                            {tx.intent || "N/A"}
+                                                        </td>
+                                                        <td className="py-3.5 px-4 text-white font-medium">
+                                                            ${(tx.max_amount || 0).toFixed(2)} {tx.currency}
+                                                        </td>
+                                                        <td className="py-3.5 px-4">
+                                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                                                tx.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-gray-500/10 text-gray-500"
+                                                            }`}>
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                                {tx.is_active ? "Active" : "Expired"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3.5 px-4 text-gray-500 text-sm">
+                                                            {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : "N/A"}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
                                 </div>
 
                                 {/* Pagination */}
-                                <div className="flex items-center justify-between mt-4">
-                                    <span className="text-sm text-gray-500">Showing 1-8 of 12,847 transactions</span>
-                                    <div className="flex gap-2">
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 disabled:opacity-50" disabled>
-                                            Previous
-                                        </button>
-                                        <button className="px-3 py-1.5 bg-white/10 border border-[#444] rounded-lg text-sm">1</button>
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">2</button>
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">3</button>
-                                        <span className="px-2 py-1.5 text-gray-500">...</span>
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">1606</button>
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">
-                                            Next
-                                        </button>
+                                {transactionsTotal > 0 && (
+                                    <div className="flex items-center justify-between mt-4">
+                                        <span className="text-sm text-gray-500">
+                                            Showing {((transactionsPage - 1) * 10) + 1}-{Math.min(transactionsPage * 10, transactionsTotal)} of {transactionsTotal} transactions
+                                        </span>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => fetchTransactions(transactionsPage - 1)}
+                                                disabled={transactionsPage <= 1}
+                                                className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 disabled:opacity-50"
+                                            >
+                                                Previous
+                                            </button>
+                                            <span className="px-3 py-1.5 text-gray-400">Page {transactionsPage}</span>
+                                            <button 
+                                                onClick={() => fetchTransactions(transactionsPage + 1)}
+                                                disabled={transactionsPage * 10 >= transactionsTotal}
+                                                className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 disabled:opacity-50"
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </motion.div>
                         )}
 
@@ -1200,112 +1333,106 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 transition={{ duration: 0.2 }}
                             >
                                 {/* Stats */}
-                                <div className="grid grid-cols-3 gap-4 mb-8">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                                     <div className="bg-[#111] border border-[#222] rounded-xl p-5">
                                         <div className="flex items-center gap-2 text-emerald-500 mb-2">
                                             <CheckCircle className="w-5 h-5" />
                                             <span className="text-xs text-gray-500">Active Consents</span>
                                         </div>
-                                        <div className="text-3xl font-semibold text-white">24</div>
-                                    </div>
-                                    <div className="bg-[#111] border border-[#222] rounded-xl p-5">
-                                        <div className="flex items-center gap-2 text-yellow-500 mb-2">
-                                            <Clock className="w-5 h-5" />
-                                            <span className="text-xs text-gray-500">Pending Approval</span>
+                                        <div className="text-3xl font-semibold text-white">
+                                            {consents.filter(c => c.is_active).length}
                                         </div>
-                                        <div className="text-3xl font-semibold text-white">3</div>
                                     </div>
                                     <div className="bg-[#111] border border-[#222] rounded-xl p-5">
                                         <div className="flex items-center gap-2 text-gray-500 mb-2">
                                             <XCircle className="w-5 h-5" />
                                             <span className="text-xs text-gray-500">Expired</span>
                                         </div>
-                                        <div className="text-3xl font-semibold text-white">7</div>
+                                        <div className="text-3xl font-semibold text-white">
+                                            {consents.filter(c => !c.is_active).length}
+                                        </div>
+                                    </div>
+                                    <div className="bg-[#111] border border-[#222] rounded-xl p-5">
+                                        <div className="flex items-center gap-2 text-cyan-500 mb-2">
+                                            <Clock className="w-5 h-5" />
+                                            <span className="text-xs text-gray-500">Total Consents</span>
+                                        </div>
+                                        <div className="text-3xl font-semibold text-white">{consents.length}</div>
                                     </div>
                                 </div>
 
-                                {/* Pending Approvals */}
-                                <div className="mb-8">
-                                    <h3 className="text-sm font-medium text-white mb-4 flex items-center gap-2">
-                                        <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                                        Pending Approval
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {[
-                                            { agent: "travel-assistant", scope: "Book flights up to $3,000", requested: "10 min ago" },
-                                            { agent: "procurement-bot", scope: "Access new vendor: Dell Technologies", requested: "2 hr ago" },
-                                            { agent: "expense-agent", scope: "Increase daily limit to $5,000", requested: "1 day ago" },
-                                        ].map((consent, i) => (
-                                            <div key={i} className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4 flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center">
-                                                        <Bot className="w-5 h-5 text-yellow-500" />
-                                                    </div>
-                                                    <div>
-                                                        <code className="text-cyan-400 text-sm">{consent.agent}</code>
-                                                        <p className="text-white text-sm mt-0.5">{consent.scope}</p>
-                                                        <p className="text-xs text-gray-500">Requested {consent.requested}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm">
-                                                        Deny
-                                                    </button>
-                                                    <button className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm">
-                                                        Approve
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                {/* Refresh Button */}
+                                <div className="mb-4 flex justify-end">
+                                    <button 
+                                        onClick={fetchConsents}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10"
+                                    >
+                                        <RefreshCw className={`w-4 h-4 ${consentsLoading ? 'animate-spin' : ''}`} />
+                                        Refresh
+                                    </button>
                                 </div>
 
                                 {/* Active Consents */}
                                 <div>
-                                    <h3 className="text-sm font-medium text-white mb-4">Active Consents</h3>
-                                    <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
-                                        <table className="w-full">
-                                            <thead>
-                                                <tr className="border-b border-[#222] bg-[#0d0d0d] text-left">
-                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th>
-                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Scope</th>
-                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Granted</th>
-                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
-                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                                    <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {[
-                                                    { agent: "procurement-bot", scope: "Purchase SaaS subscriptions up to $500/mo", granted: "Jan 1, 2026", expires: "Dec 31, 2026", status: "active" },
-                                                    { agent: "expense-agent", scope: "Submit expense reports up to $1,000", granted: "Jan 5, 2026", expires: "Mar 5, 2026", status: "active" },
-                                                    { agent: "travel-assistant", scope: "Book hotels under $300/night", granted: "Jan 10, 2026", expires: "Apr 10, 2026", status: "active" },
-                                                    { agent: "subscription-mgr", scope: "Manage recurring payments", granted: "Dec 15, 2025", expires: "Jun 15, 2026", status: "active" },
-                                                    { agent: "inventory-bot", scope: "Reorder supplies under $200", granted: "Jan 20, 2026", expires: "Jul 20, 2026", status: "active" },
-                                                ].map((c, i) => (
-                                                    <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
-                                                        <td className="py-3.5 px-4">
-                                                            <code className="text-cyan-400 text-sm">{c.agent}</code>
-                                                        </td>
-                                                        <td className="py-3.5 px-4 text-white text-sm">{c.scope}</td>
-                                                        <td className="py-3.5 px-4 text-gray-500 text-sm">{c.granted}</td>
-                                                        <td className="py-3.5 px-4 text-gray-500 text-sm">{c.expires}</td>
-                                                        <td className="py-3.5 px-4">
-                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-500">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                                Active
-                                                            </span>
-                                                        </td>
-                                                        <td className="py-3.5 px-4">
-                                                            <button className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs">
-                                                                Revoke
-                                                            </button>
-                                                        </td>
+                                    <h3 className="text-sm font-medium text-white mb-4">All Consents</h3>
+                                    {consentsLoading ? (
+                                        <div className="bg-[#111] border border-[#222] rounded-xl p-8 text-center">
+                                            <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-4" />
+                                            <p className="text-gray-500">Loading consents...</p>
+                                        </div>
+                                    ) : consents.length === 0 ? (
+                                        <div className="bg-[#111] border border-[#222] rounded-xl p-8 text-center">
+                                            <Clock className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                            <h3 className="text-white font-medium mb-2">No Consents Yet</h3>
+                                            <p className="text-gray-500 text-sm">Consents will appear here once users grant permissions to agents.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden overflow-x-auto">
+                                            <table className="w-full min-w-[600px]">
+                                                <thead>
+                                                    <tr className="border-b border-[#222] bg-[#0d0d0d] text-left">
+                                                        <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                                        <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Intent</th>
+                                                        <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Max Amount</th>
+                                                        <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                                        <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
+                                                        <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                </thead>
+                                                <tbody>
+                                                    {consents.slice(0, 20).map((c, i) => (
+                                                        <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                                            <td className="py-3.5 px-4">
+                                                                <code className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded">
+                                                                    {c.consent_id?.substring(0, 12)}...
+                                                                </code>
+                                                            </td>
+                                                            <td className="py-3.5 px-4 text-white text-sm max-w-[200px] truncate">
+                                                                {c.intent_description || "N/A"}
+                                                            </td>
+                                                            <td className="py-3.5 px-4 text-white text-sm">
+                                                                ${c.constraints?.max_amount?.toFixed(2) || "0.00"} {c.constraints?.currency || "USD"}
+                                                            </td>
+                                                            <td className="py-3.5 px-4 text-gray-500 text-sm">
+                                                                {c.created_at ? new Date(c.created_at).toLocaleDateString() : "N/A"}
+                                                            </td>
+                                                            <td className="py-3.5 px-4 text-gray-500 text-sm">
+                                                                {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : "N/A"}
+                                                            </td>
+                                                            <td className="py-3.5 px-4">
+                                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                                                    c.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-gray-500/10 text-gray-500"
+                                                                }`}>
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                                    {c.is_active ? "Active" : "Expired"}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         )}
@@ -1484,70 +1611,126 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                     </div>
                                 </div>
 
+                                {/* Show newly created key */}
+                                {showKeySecret && (
+                                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6">
+                                        <div className="flex items-start gap-3">
+                                            <CheckCircle className="w-5 h-5 text-emerald-500 mt-0.5" />
+                                            <div className="flex-1">
+                                                <p className="text-white text-sm font-medium">API Key Created Successfully!</p>
+                                                <p className="text-gray-400 text-sm mt-0.5 mb-2">Copy this key now — you won't be able to see it again.</p>
+                                                <div className="flex items-center gap-2 bg-black/20 p-2 rounded-lg">
+                                                    <code className="text-emerald-400 text-sm flex-1 font-mono">{showKeySecret}</code>
+                                                    <button 
+                                                        onClick={() => { handleCopyKey(showKeySecret); }}
+                                                        className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs font-medium"
+                                                    >
+                                                        {copiedKey === showKeySecret ? "Copied!" : "Copy"}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setShowKeySecret(null)} className="text-gray-400 hover:text-white">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Create Key Section */}
                                 <div className="bg-[#111] border border-[#222] rounded-xl p-6 mb-6">
                                     <h3 className="text-white font-medium mb-4">Create New API Key</h3>
-                                    <div className="flex gap-4">
+                                    <div className="flex gap-4 flex-wrap">
                                         <input
                                             type="text"
+                                            value={newKeyName}
+                                            onChange={(e) => setNewKeyName(e.target.value)}
                                             placeholder="Key name (e.g., Production, Staging)"
-                                            className="flex-1 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
+                                            className="flex-1 min-w-[200px] px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
-                                        <select className="px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none">
-                                            <option>Live Key</option>
-                                            <option>Test Key</option>
+                                        <select 
+                                            value={newKeyType}
+                                            onChange={(e) => setNewKeyType(e.target.value as "live" | "test")}
+                                            className="px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none"
+                                        >
+                                            <option value="live">Live Key</option>
+                                            <option value="test">Test Key</option>
                                         </select>
-                                        <button className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium">
-                                            <Plus className="w-4 h-4" />
-                                            Create Key
+                                        <button 
+                                            onClick={handleCreateApiKey}
+                                            disabled={!newKeyName.trim() || isCreatingKey}
+                                            className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isCreatingKey ? (
+                                                <>
+                                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                                    Creating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Plus className="w-4 h-4" />
+                                                    Create Key
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Keys List */}
                                 <div className="space-y-3">
-                                    {[
-                                        { name: "Production Key", key: "aa_live_sk_1a2b3c4d5e6f7g8h9i0j", created: "Jan 15, 2026", lastUsed: "2 min ago", isLive: true },
-                                        { name: "Staging Key", key: "aa_live_sk_2b3c4d5e6f7g8h9i0j1k", created: "Jan 12, 2026", lastUsed: "1 hr ago", isLive: true },
-                                        { name: "Test Key", key: "aa_test_sk_3c4d5e6f7g8h9i0j1k2l", created: "Jan 10, 2026", lastUsed: "3 days ago", isLive: false },
-                                        { name: "Development Key", key: "aa_test_sk_4d5e6f7g8h9i0j1k2l3m", created: "Jan 8, 2026", lastUsed: "1 week ago", isLive: false },
-                                    ].map((apiKey, i) => (
-                                        <div key={i} className="bg-[#111] border border-[#222] rounded-xl p-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${apiKey.isLive ? "bg-emerald-500/10" : "bg-gray-500/10"}`}>
-                                                        <Key className={`w-5 h-5 ${apiKey.isLive ? "text-emerald-500" : "text-gray-500"}`} />
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-white font-medium">{apiKey.name}</span>
-                                                            <span className={`px-2 py-0.5 rounded text-xs ${apiKey.isLive ? "bg-emerald-500/10 text-emerald-500" : "bg-gray-500/10 text-gray-500"}`}>
-                                                                {apiKey.isLive ? "Live" : "Test"}
-                                                            </span>
+                                    {apiKeys.length === 0 ? (
+                                        <div className="bg-[#111] border border-[#222] rounded-xl p-8 text-center">
+                                            <Key className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                            <h3 className="text-white font-medium mb-2">No API Keys Yet</h3>
+                                            <p className="text-gray-500 text-sm">Create your first API key to start integrating AgentAuth.</p>
+                                        </div>
+                                    ) : (
+                                        apiKeys.map((apiKey) => (
+                                            <div key={apiKey.id} className="bg-[#111] border border-[#222] rounded-xl p-4">
+                                                <div className="flex items-center justify-between flex-wrap gap-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${apiKey.isLive ? "bg-emerald-500/10" : "bg-gray-500/10"}`}>
+                                                            <Key className={`w-5 h-5 ${apiKey.isLive ? "text-emerald-500" : "text-gray-500"}`} />
                                                         </div>
-                                                        <div className="flex items-center gap-3 mt-1">
-                                                            <code className="text-sm text-gray-500 bg-white/5 px-2 py-0.5 rounded">
-                                                                {apiKey.key.substring(0, 12)}...{apiKey.key.substring(apiKey.key.length - 4)}
-                                                            </code>
-                                                            <span className="text-xs text-gray-500">Created {apiKey.created}</span>
-                                                            <span className="text-xs text-gray-500">• Last used {apiKey.lastUsed}</span>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-white font-medium">{apiKey.name}</span>
+                                                                <span className={`px-2 py-0.5 rounded text-xs ${apiKey.isLive ? "bg-emerald-500/10 text-emerald-500" : "bg-gray-500/10 text-gray-500"}`}>
+                                                                    {apiKey.isLive ? "Live" : "Test"}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                                <code className="text-sm text-gray-500 bg-white/5 px-2 py-0.5 rounded">
+                                                                    {apiKey.key.substring(0, 12)}...{apiKey.key.substring(apiKey.key.length - 4)}
+                                                                </code>
+                                                                <span className="text-xs text-gray-500">Created {apiKey.created}</span>
+                                                                <span className="text-xs text-gray-500">• Last used {apiKey.lastUsed}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <button className="p-2.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg">
-                                                        <Copy className="w-4 h-4 text-gray-400" />
-                                                    </button>
-                                                    <button className="p-2.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg">
-                                                        <Eye className="w-4 h-4 text-gray-400" />
-                                                    </button>
-                                                    <button className="p-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg">
-                                                        <Trash2 className="w-4 h-4 text-red-500" />
-                                                    </button>
+                                                    <div className="flex items-center gap-2">
+                                                        <button 
+                                                            onClick={() => handleCopyKey(apiKey.key)}
+                                                            className="p-2.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg"
+                                                            title="Copy key"
+                                                        >
+                                                            {copiedKey === apiKey.key ? (
+                                                                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                                                            ) : (
+                                                                <Copy className="w-4 h-4 text-gray-400" />
+                                                            )}
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteKey(apiKey.id)}
+                                                            className="p-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg"
+                                                            title="Delete key"
+                                                        >
+                                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    )}
                                 </div>
                             </motion.div>
                         )}
