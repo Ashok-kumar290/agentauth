@@ -4,7 +4,7 @@ Authorize API - POST /v1/authorize
 Real-time authorization decisions for agent actions.
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import get_db
@@ -36,6 +36,7 @@ router = APIRouter(prefix="/v1", tags=["Authorization"])
 )
 async def authorize(
     request: AuthorizeRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> AuthorizeResponse:
     """
@@ -51,7 +52,7 @@ async def authorize(
     4. Merchant restrictions
     """
     try:
-        response = await auth_service.authorize(db, request)
+        response = await auth_service.authorize(db, request, background_tasks)
         return response
     except ValueError as e:
         logger.warning(f"Authorization validation error: {e}")

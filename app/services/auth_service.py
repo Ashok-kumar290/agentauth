@@ -4,7 +4,7 @@ Auth Service - Authorization decision engine
 OPTIMIZED for <10ms latency:
 1. Token verification is in-memory (JWT decode) - ~1ms
 2. Consent lookup uses pre-warmed in-memory cache - ~0ms
-3. Authorization record write is FULLY ASYNC (background queue)
+3. Authorization record write uses FastAPI BackgroundTasks
 """
 import asyncio
 import secrets
@@ -14,9 +14,11 @@ from typing import Optional, Dict, Any
 from collections import deque
 import threading
 
+from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.authorization import Authorization
+from app.models.database import async_session_maker
 from app.schemas.authorize import AuthorizeRequest, AuthorizeResponse
 from app.services.token_service import token_service
 from app.services.consent_service import consent_service
@@ -115,7 +117,8 @@ class AuthService:
     async def authorize(
         self,
         db: AsyncSession,
-        request: AuthorizeRequest
+        request: AuthorizeRequest,
+        background_tasks: Optional[BackgroundTasks] = None
     ) -> AuthorizeResponse:
         """
         Make an authorization decision.
@@ -167,8 +170,8 @@ class AuthService:
             "created_at": now,
         }
         
-        # Queue authorization for async DB write (non-blocking)
-        _auth_queue.append({
+        # Write authorization to DB using FastAPI BackgroundTasks (reliable)
+        auth_data = {
             "authorization_code": authorization_code,
             "consent_id": verification.payload.consent_id,
             "decision": "ALLOW",
@@ -180,7 +183,14 @@ class AuthService:
             "action": request.action,
             "description": request.transaction.description,
             "expires_at": expires_at,
-        })
+        }
+        
+        if background_tasks:
+            # Use FastAPI BackgroundTasks for reliable async writes
+            background_tasks.add_task(write_authorization_to_db, auth_data)
+        else:
+            # Fallback to queue if BackgroundTasks not available
+            _auth_queue.append(auth_data)
         
         # Return IMMEDIATELY - no DB wait
         return AuthorizeResponse(
@@ -226,9 +236,32 @@ class AuthService:
 auth_service = AuthService()
 
 
+async def write_authorization_to_db(auth_data: dict):
+    """Write a single authorization to the database (used by BackgroundTasks)."""
+    try:
+        async with async_session_maker() as session:
+            authorization = Authorization(
+                authorization_code=auth_data["authorization_code"],
+                consent_id=auth_data["consent_id"],
+                decision=auth_data["decision"],
+                amount=auth_data["amount"],
+                currency=auth_data["currency"],
+                merchant_id=auth_data["merchant_id"],
+                merchant_name=auth_data.get("merchant_name"),
+                merchant_category=auth_data.get("merchant_category"),
+                action=auth_data["action"],
+                transaction_metadata={"description": auth_data.get("description")},
+                expires_at=auth_data["expires_at"],
+            )
+            session.add(authorization)
+            await session.commit()
+            logger.debug(f"Authorization {auth_data['authorization_code']} written to DB")
+    except Exception as e:
+        logger.error(f"Failed to write authorization to DB: {e}")
+
+
 async def flush_auth_queue():
-    """Background task to flush authorization queue to DB."""
-    from app.models.database import async_session_maker
+    """Background task to flush authorization queue to DB (fallback)."""
     
     while True:
         await asyncio.sleep(1)  # Flush every second
@@ -265,8 +298,9 @@ async def flush_auth_queue():
                     )
                     session.add(authorization)
                 await session.commit()
+                logger.info(f"Flushed {len(batch)} authorizations to database")
         except Exception as e:
-            print(f"Auth queue flush error: {e}")
+            logger.error(f"Auth queue flush error: {e}")
 
 
 def start_background_worker():
@@ -274,4 +308,10 @@ def start_background_worker():
     global _background_worker_started
     if not _background_worker_started:
         _background_worker_started = True
-        asyncio.create_task(flush_auth_queue())
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(flush_auth_queue())
+            logger.info("Auth queue background worker started")
+        except RuntimeError:
+            # No running event loop - will start when first needed
+            logger.warning("No event loop running, auth queue worker deferred")
