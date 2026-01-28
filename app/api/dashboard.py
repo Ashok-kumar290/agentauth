@@ -297,5 +297,38 @@ async def dashboard_health():
     return {
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "1.0.1",  # Incremented to force redeploy
+        "version": "1.0.2",  # Incremented to verify new code deployed
     }
+
+
+@router.get("/debug/authorizations")
+async def debug_authorizations(
+    limit: int = Query(default=10, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Debug endpoint to check authorization records."""
+    try:
+        # Check if table exists and has data
+        result = await db.execute(
+            select(Authorization).order_by(desc(Authorization.created_at)).limit(limit)
+        )
+        auths = result.scalars().all()
+        
+        return {
+            "count": len(auths),
+            "authorizations": [
+                {
+                    "code": a.authorization_code,
+                    "consent_id": a.consent_id,
+                    "decision": a.decision,
+                    "amount": a.amount,
+                    "created_at": a.created_at.isoformat() if a.created_at else None,
+                }
+                for a in auths
+            ]
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }
