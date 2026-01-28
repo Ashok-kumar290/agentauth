@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { X, CreditCard, Lock, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface CheckoutModalProps {
     isOpen: boolean;
@@ -20,6 +21,7 @@ export function CheckoutModal({
     const [isLoading, setIsLoading] = useState(false);
     const [email, setEmail] = useState("");
     const [name, setName] = useState("");
+    const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
 
@@ -29,10 +31,40 @@ export function CheckoutModal({
         setIsLoading(true);
 
         try {
-            // For free tier, just register
+            // For free tier, create account via Supabase
             if (planId === "free" || planId === "community") {
-                // Simulate API call for free tier
-                await new Promise((resolve) => setTimeout(resolve, 1000));
+                if (!password || password.length < 6) {
+                    throw new Error("Password must be at least 6 characters");
+                }
+                
+                // Create user in Supabase
+                const { data, error: signUpError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            full_name: name,
+                            plan: planId,
+                        },
+                    },
+                });
+                
+                if (signUpError) {
+                    throw signUpError;
+                }
+                
+                // Check if email confirmation is required
+                if (data.user && !data.session) {
+                    setSuccess(true);
+                    return;
+                }
+                
+                // If session exists, user is logged in
+                if (data.session) {
+                    window.location.href = "/portal?checkout=success";
+                    return;
+                }
+                
                 setSuccess(true);
                 return;
             }
@@ -76,6 +108,7 @@ export function CheckoutModal({
         if (!isLoading) {
             setEmail("");
             setName("");
+            setPassword("");
             setError("");
             setSuccess(false);
             onClose();
@@ -195,8 +228,27 @@ export function CheckoutModal({
                                             />
                                         </div>
 
+                                        {/* Password input for free tier */}
+                                        {(planId === "free" || planId === "community") && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                                    Password
+                                                </label>
+                                                <input
+                                                    type="password"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    required
+                                                    minLength={6}
+                                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
+                                                    placeholder="At least 6 characters"
+                                                    disabled={isLoading}
+                                                />
+                                            </div>
+                                        )}
+
                                         {/* Card info placeholder */}
-                                        {planId !== "free" && (
+                                        {planId !== "free" && planId !== "community" && (
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-300 mb-2">
                                                     Payment Method

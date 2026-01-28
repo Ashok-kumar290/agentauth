@@ -361,6 +361,53 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
     const [consents, setConsents] = useState<any[]>([]);
     const [consentsLoading, setConsentsLoading] = useState(false);
 
+    // Agents state
+    const [agents, setAgents] = useState<any[]>([
+        { id: "agent_1", name: "procurement-bot", status: "active", lastActive: "2 min ago", transactions: 3421, volume: "$289.3K", approvalRate: 98.2 },
+        { id: "agent_2", name: "expense-agent", status: "active", lastActive: "15 min ago", transactions: 2156, volume: "$187.2K", approvalRate: 97.8 },
+        { id: "agent_3", name: "travel-assistant", status: "active", lastActive: "32 min ago", transactions: 1823, volume: "$156.8K", approvalRate: 96.5 },
+    ]);
+    const [agentSearch, setAgentSearch] = useState("");
+    const [showRegisterAgent, setShowRegisterAgent] = useState(false);
+    const [newAgentName, setNewAgentName] = useState("");
+
+    // Webhooks state
+    const [webhooks, setWebhooks] = useState<any[]>([]);
+    const [newWebhookUrl, setNewWebhookUrl] = useState("");
+    const [isAddingWebhook, setIsAddingWebhook] = useState(false);
+
+    // Team state
+    const [teamMembers, setTeamMembers] = useState<any[]>([
+        { id: "tm_1", name: "You", email: user?.email || "admin@company.com", role: "Owner", avatar: "👤" },
+    ]);
+    const [inviteEmail, setInviteEmail] = useState("");
+    const [inviteRole, setInviteRole] = useState("Admin");
+
+    // Search & Filter state
+    const [transactionSearch, setTransactionSearch] = useState("");
+    const [transactionStatus, setTransactionStatus] = useState("all");
+    const [auditLogSearch, setAuditLogSearch] = useState("");
+    const [auditEventType, setAuditEventType] = useState("all");
+
+    // Settings state
+    const [orgName, setOrgName] = useState("Acme Inc");
+    const [orgUrl, setOrgUrl] = useState("acme");
+    const [editingOrgName, setEditingOrgName] = useState(false);
+    const [editingOrgUrl, setEditingOrgUrl] = useState(false);
+    const [notifications, setNotifications] = useState({
+        authAlerts: true,
+        deniedTx: true,
+        dailyDigest: false,
+        weeklyReport: true,
+    });
+
+    // Billing state
+    const [currentPlan] = useState("Startup");
+    const [billingHistory] = useState([
+        { id: "inv_001", date: "Jan 1, 2026", amount: "$49.00", status: "paid" },
+        { id: "inv_002", date: "Dec 1, 2025", amount: "$49.00", status: "paid" },
+    ]);
+
     // Check backend health on mount
     useEffect(() => {
         const checkBackend = async () => {
@@ -671,6 +718,168 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
         }
     };
 
+    // Consent handlers
+    const handleApproveConsent = async (consentId: string) => {
+        try {
+            // In production, this would call the backend
+            setConsents(prev => prev.map(c => 
+                c.consent_id === consentId ? { ...c, is_active: true, status: "approved" } : c
+            ));
+            console.log("Approved consent:", consentId);
+        } catch (error) {
+            console.error("Failed to approve consent:", error);
+        }
+    };
+
+    const handleDenyConsent = async (consentId: string) => {
+        try {
+            setConsents(prev => prev.filter(c => c.consent_id !== consentId));
+            console.log("Denied consent:", consentId);
+        } catch (error) {
+            console.error("Failed to deny consent:", error);
+        }
+    };
+
+    const handleRevokeConsent = async (consentId: string) => {
+        try {
+            setConsents(prev => prev.map(c => 
+                c.consent_id === consentId ? { ...c, is_active: false } : c
+            ));
+            console.log("Revoked consent:", consentId);
+        } catch (error) {
+            console.error("Failed to revoke consent:", error);
+        }
+    };
+
+    // Agent handlers
+    const handleRegisterAgent = () => {
+        if (!newAgentName.trim()) return;
+        const newAgent = {
+            id: `agent_${Date.now()}`,
+            name: newAgentName.trim(),
+            status: "active",
+            lastActive: "Just now",
+            transactions: 0,
+            volume: "$0",
+            approvalRate: 100,
+        };
+        setAgents(prev => [...prev, newAgent]);
+        setNewAgentName("");
+        setShowRegisterAgent(false);
+    };
+
+    const handleDeleteAgent = (agentId: string) => {
+        if (confirm("Are you sure you want to delete this agent?")) {
+            setAgents(prev => prev.filter(a => a.id !== agentId));
+        }
+    };
+
+    // Webhook handlers
+    const handleAddWebhook = () => {
+        if (!newWebhookUrl.trim()) return;
+        const newWebhook = {
+            id: `wh_${Date.now()}`,
+            url: newWebhookUrl.trim(),
+            events: ["authorization.created", "authorization.denied"],
+            status: "active",
+            successRate: 100,
+            created: new Date().toLocaleDateString(),
+        };
+        setWebhooks(prev => [...prev, newWebhook]);
+        setNewWebhookUrl("");
+        setIsAddingWebhook(false);
+    };
+
+    const handleTestWebhook = async (webhookId: string) => {
+        const webhook = webhooks.find(w => w.id === webhookId);
+        if (!webhook) return;
+        alert(`Testing webhook: ${webhook.url}\n\nA test event will be sent to this endpoint.`);
+    };
+
+    const handleDeleteWebhook = (webhookId: string) => {
+        if (confirm("Are you sure you want to delete this webhook?")) {
+            setWebhooks(prev => prev.filter(w => w.id !== webhookId));
+        }
+    };
+
+    // Team handlers
+    const handleInviteTeamMember = () => {
+        if (!inviteEmail.trim()) return;
+        const newMember = {
+            id: `tm_${Date.now()}`,
+            name: inviteEmail.split("@")[0],
+            email: inviteEmail.trim(),
+            role: inviteRole,
+            avatar: "👤",
+            status: "pending",
+        };
+        setTeamMembers(prev => [...prev, newMember]);
+        setInviteEmail("");
+        alert(`Invitation sent to ${inviteEmail}`);
+    };
+
+    const handleRemoveTeamMember = (memberId: string) => {
+        if (confirm("Are you sure you want to remove this team member?")) {
+            setTeamMembers(prev => prev.filter(m => m.id !== memberId));
+        }
+    };
+
+    // Billing handlers
+    const handleUpgradePlan = () => {
+        window.location.href = "/#pricing";
+    };
+
+    const handleUpdatePayment = () => {
+        alert("Redirecting to payment update portal...");
+        // In production, this would create a Stripe portal session
+    };
+
+    const handleDownloadInvoice = (invoiceId: string) => {
+        alert(`Downloading invoice ${invoiceId}...`);
+        // In production, this would download the PDF
+    };
+
+    // Settings handlers
+    const handleSaveOrgName = () => {
+        setEditingOrgName(false);
+        // Save to backend
+    };
+
+    const handleSaveOrgUrl = () => {
+        setEditingOrgUrl(false);
+        // Save to backend
+    };
+
+    const handleToggleNotification = (key: keyof typeof notifications) => {
+        setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const handleDeleteOrganization = () => {
+        if (confirm("Are you sure you want to delete your organization? This action cannot be undone.")) {
+            if (confirm("This will permanently delete all data. Type 'DELETE' to confirm.")) {
+                alert("Organization deleted. Redirecting...");
+                window.location.href = "/";
+            }
+        }
+    };
+
+    // Export handlers
+    const handleExportTransactions = () => {
+        const csvContent = "ID,Intent,Amount,Status,Created\n" + 
+            transactions.map(t => `${t.id},${t.intent},${t.max_amount},${t.is_active ? "Active" : "Expired"},${t.created_at}`).join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "transactions.csv";
+        a.click();
+    };
+
+    const handleExportAuditLogs = () => {
+        alert("Exporting audit logs...");
+        // In production, this would export to CSV/PDF
+    };
+
     // Load API keys from localStorage
     useEffect(() => {
         const storedKeys = localStorage.getItem("agentauth_api_keys");
@@ -824,7 +1033,10 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                             <BookOpen className="w-4 h-4" />
                             Docs
                         </a>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium transition-colors">
+                        <button 
+                            onClick={() => { setActiveNav("apikeys"); setIsAddingKey(true); }}
+                            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium transition-colors"
+                        >
                             <Plus className="w-4 h-4" />
                             New API Key
                         </button>
@@ -1216,31 +1428,44 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 transition={{ duration: 0.2 }}
                             >
                                 {/* Filters */}
-                                <div className="flex items-center gap-4 mb-6 flex-wrap">
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6">
                                     <div className="flex-1 min-w-[200px] relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                         <input
                                             type="text"
                                             placeholder="Search by transaction ID, merchant, or amount..."
+                                            value={transactionSearch}
+                                            onChange={(e) => setTransactionSearch(e.target.value)}
                                             className="w-full pl-10 pr-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
                                     </div>
-                                    <select className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none">
-                                        <option>All Status</option>
-                                        <option>Authorized</option>
-                                        <option>Expired</option>
+                                    <select 
+                                        value={transactionStatus}
+                                        onChange={(e) => setTransactionStatus(e.target.value)}
+                                        className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none"
+                                    >
+                                        <option value="all">All Status</option>
+                                        <option value="active">Authorized</option>
+                                        <option value="expired">Expired</option>
                                     </select>
                                     <button 
                                         onClick={() => fetchTransactions(1)}
-                                        className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10"
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 text-white"
                                     >
                                         <RefreshCw className={`w-4 h-4 ${transactionsLoading ? 'animate-spin' : ''}`} />
                                         Refresh
                                     </button>
+                                    <button 
+                                        onClick={handleExportTransactions}
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 text-white"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Export
+                                    </button>
                                 </div>
 
                                 {/* Transactions Table */}
-                                <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
+                                <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden overflow-x-auto">
                                     {transactionsLoading ? (
                                         <div className="p-8 text-center">
                                             <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-4" />
@@ -1253,7 +1478,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                             <p className="text-gray-500 text-sm">Transactions will appear here once your agents start making authorized requests.</p>
                                         </div>
                                     ) : (
-                                        <table className="w-full">
+                                        <table className="w-full min-w-[600px]">
                                             <thead>
                                                 <tr className="border-b border-[#222] bg-[#0d0d0d] text-left">
                                                     <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
@@ -1264,7 +1489,14 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {transactions.map((tx, i) => (
+                                                {transactions
+                                                    .filter(tx => transactionStatus === "all" || 
+                                                        (transactionStatus === "active" && tx.is_active) || 
+                                                        (transactionStatus === "expired" && !tx.is_active))
+                                                    .filter(tx => !transactionSearch || 
+                                                        tx.id?.toLowerCase().includes(transactionSearch.toLowerCase()) ||
+                                                        tx.intent?.toLowerCase().includes(transactionSearch.toLowerCase()))
+                                                    .map((tx, i) => (
                                                     <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
                                                         <td className="py-3.5 px-4">
                                                             <code className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded">
@@ -1388,15 +1620,15 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                         </div>
                                     ) : (
                                         <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden overflow-x-auto">
-                                            <table className="w-full min-w-[600px]">
+                                            <table className="w-full min-w-[700px]">
                                                 <thead>
                                                     <tr className="border-b border-[#222] bg-[#0d0d0d] text-left">
                                                         <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                                         <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Intent</th>
                                                         <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Max Amount</th>
                                                         <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                                                        <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
                                                         <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                        <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -1416,16 +1648,44 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                             <td className="py-3.5 px-4 text-gray-500 text-sm">
                                                                 {c.created_at ? new Date(c.created_at).toLocaleDateString() : "N/A"}
                                                             </td>
-                                                            <td className="py-3.5 px-4 text-gray-500 text-sm">
-                                                                {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : "N/A"}
-                                                            </td>
                                                             <td className="py-3.5 px-4">
                                                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                                                                    c.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-gray-500/10 text-gray-500"
+                                                                    c.is_active ? "bg-emerald-500/10 text-emerald-500" : 
+                                                                    c.status === "pending" ? "bg-yellow-500/10 text-yellow-500" :
+                                                                    "bg-gray-500/10 text-gray-500"
                                                                 }`}>
                                                                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                                    {c.is_active ? "Active" : "Expired"}
+                                                                    {c.status === "pending" ? "Pending" : c.is_active ? "Active" : "Expired"}
                                                                 </span>
+                                                            </td>
+                                                            <td className="py-3.5 px-4">
+                                                                <div className="flex items-center gap-2">
+                                                                    {c.status === "pending" ? (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => handleApproveConsent(c.consent_id)}
+                                                                                className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg text-xs font-medium hover:bg-emerald-500/20"
+                                                                            >
+                                                                                Approve
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleDenyConsent(c.consent_id)}
+                                                                                className="px-3 py-1.5 bg-red-500/10 text-red-500 rounded-lg text-xs font-medium hover:bg-red-500/20"
+                                                                            >
+                                                                                Deny
+                                                                            </button>
+                                                                        </>
+                                                                    ) : c.is_active ? (
+                                                                        <button
+                                                                            onClick={() => handleRevokeConsent(c.consent_id)}
+                                                                            className="px-3 py-1.5 bg-orange-500/10 text-orange-500 rounded-lg text-xs font-medium hover:bg-orange-500/20"
+                                                                        >
+                                                                            Revoke
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="text-xs text-gray-500">—</span>
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -1454,27 +1714,61 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                             <input
                                                 type="text"
                                                 placeholder="Search agents..."
+                                                value={agentSearch}
+                                                onChange={(e) => setAgentSearch(e.target.value)}
                                                 className="pl-10 pr-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none focus:border-[#444] w-64"
                                             />
                                         </div>
                                     </div>
-                                    <button className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium">
+                                    <button 
+                                        onClick={() => setShowRegisterAgent(true)}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium"
+                                    >
                                         <Plus className="w-4 h-4" />
                                         Register Agent
                                     </button>
                                 </div>
 
+                                {/* Register Agent Modal */}
+                                {showRegisterAgent && (
+                                    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+                                        <div className="bg-[#111] border border-[#333] rounded-2xl p-6 w-full max-w-md">
+                                            <h3 className="text-lg font-semibold text-white mb-4">Register New Agent</h3>
+                                            <div className="mb-4">
+                                                <label className="block text-sm text-gray-400 mb-2">Agent Name</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g., procurement-bot"
+                                                    value={newAgentName}
+                                                    onChange={(e) => setNewAgentName(e.target.value)}
+                                                    className="w-full px-4 py-3 bg-black border border-[#333] rounded-lg text-white focus:outline-none focus:border-[#555]"
+                                                />
+                                            </div>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={() => setShowRegisterAgent(false)}
+                                                    className="flex-1 px-4 py-3 border border-[#333] rounded-lg text-white hover:bg-white/5"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={handleRegisterAgent}
+                                                    disabled={!newAgentName.trim()}
+                                                    className="flex-1 px-4 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-200 disabled:opacity-50"
+                                                >
+                                                    Register
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Agents Grid */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    {[
-                                        { name: "procurement-bot", status: "active", lastActive: "2 min ago", transactions: 3421, volume: "$289.3K", approvalRate: 98.2 },
-                                        { name: "expense-agent", status: "active", lastActive: "15 min ago", transactions: 2156, volume: "$187.2K", approvalRate: 97.8 },
-                                        { name: "travel-assistant", status: "active", lastActive: "32 min ago", transactions: 1823, volume: "$156.8K", approvalRate: 96.5 },
-                                        { name: "subscription-mgr", status: "active", lastActive: "1 hr ago", transactions: 1245, volume: "$112.4K", approvalRate: 99.1 },
-                                        { name: "inventory-bot", status: "inactive", lastActive: "2 days ago", transactions: 987, volume: "$101.5K", approvalRate: 97.3 },
-                                        { name: "analytics-agent", status: "active", lastActive: "5 min ago", transactions: 456, volume: "$45.2K", approvalRate: 100 },
-                                    ].map((agent, i) => (
-                                        <div key={i} className="bg-[#111] border border-[#222] rounded-xl p-5">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {agents
+                                        .filter(agent => agent.name.toLowerCase().includes(agentSearch.toLowerCase()))
+                                        .map((agent) => (
+                                        <div key={agent.id} className="bg-[#111] border border-[#222] rounded-xl p-5">
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${agent.status === "active" ? "bg-emerald-500/10" : "bg-gray-500/10"}`}>
@@ -1491,8 +1785,11 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button className="p-2 hover:bg-white/5 rounded-lg">
-                                                    <MoreVertical className="w-4 h-4 text-gray-500" />
+                                                <button 
+                                                    onClick={() => handleDeleteAgent(agent.id)}
+                                                    className="p-2 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                             <div className="grid grid-cols-3 gap-4">
@@ -1512,6 +1809,25 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                         </div>
                                     ))}
                                 </div>
+                                
+                                {/* Empty State */}
+                                {agents.filter(agent => agent.name.toLowerCase().includes(agentSearch.toLowerCase())).length === 0 && (
+                                    <div className="bg-[#111] border border-[#222] rounded-xl p-12 text-center">
+                                        <Bot className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                        <h3 className="text-white font-medium mb-2">No Agents Found</h3>
+                                        <p className="text-gray-500 text-sm mb-4">
+                                            {agentSearch ? "No agents match your search." : "Register your first agent to get started."}
+                                        </p>
+                                        {!agentSearch && (
+                                            <button
+                                                onClick={() => setShowRegisterAgent(true)}
+                                                className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200"
+                                            >
+                                                Register Agent
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </motion.div>
                         )}
 
@@ -1525,28 +1841,37 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 transition={{ duration: 0.2 }}
                             >
                                 {/* Filters */}
-                                <div className="flex items-center gap-4 mb-6">
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6">
                                     <div className="flex-1 relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                         <input
                                             type="text"
                                             placeholder="Search logs..."
+                                            value={auditLogSearch}
+                                            onChange={(e) => setAuditLogSearch(e.target.value)}
                                             className="w-full pl-10 pr-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
                                     </div>
-                                    <select className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none">
-                                        <option>All Events</option>
-                                        <option>Authorization</option>
-                                        <option>Configuration</option>
-                                        <option>Security</option>
-                                        <option>API</option>
+                                    <select 
+                                        value={auditEventType}
+                                        onChange={(e) => setAuditEventType(e.target.value)}
+                                        className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none"
+                                    >
+                                        <option value="all">All Events</option>
+                                        <option value="authorization">Authorization</option>
+                                        <option value="config">Configuration</option>
+                                        <option value="security">Security</option>
+                                        <option value="api">API</option>
                                     </select>
                                     <select className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none">
                                         <option>Last 24 hours</option>
                                         <option>Last 7 days</option>
                                         <option>Last 30 days</option>
                                     </select>
-                                    <button className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">
+                                    <button 
+                                        onClick={handleExportAuditLogs}
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 text-white"
+                                    >
                                         <Download className="w-4 h-4" />
                                         Export
                                     </button>
@@ -1565,28 +1890,55 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                         { type: "config", icon: Webhook, color: "purple", title: "Webhook configured", details: "Added endpoint: https://api.example.com/webhooks", time: "1 day ago" },
                                         { type: "authorization", icon: Shield, color: "emerald", title: "Consent granted", details: "subscription-mgr granted access to manage recurring payments", time: "1 day ago" },
                                         { type: "security", icon: UserPlus, color: "blue", title: "Team member added", details: "sarah@company.com invited as Admin", time: "2 days ago" },
-                                    ].map((log, i) => (
+                                    ]
+                                    .filter(log => auditEventType === "all" || log.type === auditEventType)
+                                    .filter(log => !auditLogSearch || log.title.toLowerCase().includes(auditLogSearch.toLowerCase()) || log.details.toLowerCase().includes(auditLogSearch.toLowerCase()))
+                                    .map((log, i) => (
                                         <div key={i} className="flex items-start gap-4 p-4 bg-[#111] border border-[#222] rounded-xl hover:bg-white/[0.02]">
-                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-${log.color}-500/10`}>
-                                                <log.icon className={`w-5 h-5 text-${log.color}-500`} />
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                                log.color === "emerald" ? "bg-emerald-500/10" :
+                                                log.color === "yellow" ? "bg-yellow-500/10" :
+                                                log.color === "red" ? "bg-red-500/10" :
+                                                log.color === "purple" ? "bg-purple-500/10" :
+                                                log.color === "cyan" ? "bg-cyan-500/10" :
+                                                log.color === "orange" ? "bg-orange-500/10" :
+                                                "bg-blue-500/10"
+                                            }`}>
+                                                <log.icon className={`w-5 h-5 ${
+                                                    log.color === "emerald" ? "text-emerald-500" :
+                                                    log.color === "yellow" ? "text-yellow-500" :
+                                                    log.color === "red" ? "text-red-500" :
+                                                    log.color === "purple" ? "text-purple-500" :
+                                                    log.color === "cyan" ? "text-cyan-500" :
+                                                    log.color === "orange" ? "text-orange-500" :
+                                                    "text-blue-500"
+                                                }`} />
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="text-white font-medium text-sm">{log.title}</span>
-                                                    <span className={`px-2 py-0.5 rounded text-xs bg-${log.color}-500/10 text-${log.color}-500`}>
+                                                    <span className={`px-2 py-0.5 rounded text-xs ${
+                                                        log.color === "emerald" ? "bg-emerald-500/10 text-emerald-500" :
+                                                        log.color === "yellow" ? "bg-yellow-500/10 text-yellow-500" :
+                                                        log.color === "red" ? "bg-red-500/10 text-red-500" :
+                                                        log.color === "purple" ? "bg-purple-500/10 text-purple-500" :
+                                                        log.color === "cyan" ? "bg-cyan-500/10 text-cyan-500" :
+                                                        log.color === "orange" ? "bg-orange-500/10 text-orange-500" :
+                                                        "bg-blue-500/10 text-blue-500"
+                                                    }`}>
                                                         {log.type}
                                                     </span>
                                                 </div>
-                                                <p className="text-gray-400 text-sm mt-0.5">{log.details}</p>
+                                                <p className="text-gray-400 text-sm mt-0.5 truncate">{log.details}</p>
                                             </div>
-                                            <span className="text-xs text-gray-500">{log.time}</span>
+                                            <span className="text-xs text-gray-500 whitespace-nowrap">{log.time}</span>
                                         </div>
                                     ))}
                                 </div>
 
                                 {/* Load More */}
                                 <div className="mt-6 text-center">
-                                    <button className="px-6 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">
+                                    <button className="px-6 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 text-white">
                                         Load More
                                     </button>
                                 </div>
@@ -1751,9 +2103,15 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                         <input
                                             type="text"
                                             placeholder="https://your-server.com/webhooks/agentauth"
+                                            value={newWebhookUrl}
+                                            onChange={(e) => setNewWebhookUrl(e.target.value)}
                                             className="flex-1 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
-                                        <button className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium">
+                                        <button 
+                                            onClick={handleAddWebhook}
+                                            disabled={!newWebhookUrl.trim()}
+                                            className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium disabled:opacity-50"
+                                        >
                                             <Plus className="w-4 h-4" />
                                             Add Endpoint
                                         </button>
@@ -1762,12 +2120,14 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
 
                                 {/* Webhooks List */}
                                 <div className="space-y-4">
-                                    {[
-                                        { url: "https://api.company.com/webhooks/agentauth", events: ["authorization.created", "authorization.denied"], status: "active", successRate: 99.8 },
-                                        { url: "https://slack.company.com/hooks/notify", events: ["authorization.denied", "consent.requested"], status: "active", successRate: 100 },
-                                        { url: "https://analytics.company.com/events", events: ["all"], status: "failing", successRate: 85.2 },
-                                    ].map((webhook, i) => (
-                                        <div key={i} className="bg-[#111] border border-[#222] rounded-xl p-5">
+                                    {webhooks.length === 0 ? (
+                                        <div className="bg-[#111] border border-[#222] rounded-xl p-12 text-center">
+                                            <Webhook className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                            <h3 className="text-white font-medium mb-2">No Webhooks Configured</h3>
+                                            <p className="text-gray-500 text-sm">Add a webhook endpoint to receive real-time notifications.</p>
+                                        </div>
+                                    ) : webhooks.map((webhook) => (
+                                        <div key={webhook.id} className="bg-[#111] border border-[#222] rounded-xl p-5">
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${webhook.status === "active" ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
@@ -1785,14 +2145,17 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
+                                                    <button 
+                                                        onClick={() => handleTestWebhook(webhook.id)}
+                                                        className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs"
+                                                    >
                                                         <Send className="w-3.5 h-3.5 inline mr-1" />
                                                         Test
                                                     </button>
-                                                    <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
-                                                        Edit
-                                                    </button>
-                                                    <button className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-xs">
+                                                    <button 
+                                                        onClick={() => handleDeleteWebhook(webhook.id)}
+                                                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-xs"
+                                                    >
                                                         Delete
                                                     </button>
                                                 </div>
@@ -1800,7 +2163,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                             <div>
                                                 <p className="text-xs text-gray-500 mb-2">Subscribed Events</p>
                                                 <div className="flex flex-wrap gap-2">
-                                                    {webhook.events.map((event, j) => (
+                                                    {webhook.events.map((event: string, j: number) => (
                                                         <span key={j} className="px-2.5 py-1 bg-white/5 rounded-lg text-xs text-gray-400">
                                                             {event}
                                                         </span>
@@ -1814,7 +2177,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 {/* Event Types Reference */}
                                 <div className="mt-8">
                                     <h3 className="text-white font-medium mb-4">Available Event Types</h3>
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                         {[
                                             "authorization.created", "authorization.denied", "authorization.pending",
                                             "consent.requested", "consent.granted", "consent.revoked",
@@ -1841,18 +2204,28 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 {/* Invite Section */}
                                 <div className="bg-[#111] border border-[#222] rounded-xl p-6 mb-6">
                                     <h3 className="text-white font-medium mb-4">Invite Team Member</h3>
-                                    <div className="flex gap-4">
+                                    <div className="flex flex-col sm:flex-row gap-4">
                                         <input
                                             type="email"
                                             placeholder="colleague@company.com"
+                                            value={inviteEmail}
+                                            onChange={(e) => setInviteEmail(e.target.value)}
                                             className="flex-1 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
-                                        <select className="px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none">
-                                            <option>Admin</option>
-                                            <option>Developer</option>
-                                            <option>Viewer</option>
+                                        <select 
+                                            value={inviteRole}
+                                            onChange={(e) => setInviteRole(e.target.value)}
+                                            className="px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none"
+                                        >
+                                            <option value="Admin">Admin</option>
+                                            <option value="Developer">Developer</option>
+                                            <option value="Viewer">Viewer</option>
                                         </select>
-                                        <button className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium">
+                                        <button 
+                                            onClick={handleInviteTeamMember}
+                                            disabled={!inviteEmail.trim() || !inviteEmail.includes("@")}
+                                            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium disabled:opacity-50"
+                                        >
                                             <UserPlus className="w-4 h-4" />
                                             Send Invite
                                         </button>
@@ -1860,34 +2233,29 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 </div>
 
                                 {/* Team Members */}
-                                <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
-                                    <table className="w-full">
+                                <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden overflow-x-auto">
+                                    <table className="w-full min-w-[600px]">
                                         <thead>
                                             <tr className="border-b border-[#222] bg-[#0d0d0d] text-left">
                                                 <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
                                                 <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                                                 <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                                 <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Last Active</th>
-                                                <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                                                <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {[
-                                                { name: "John Doe", email: "john@company.com", role: "Owner", status: "active", lastActive: "Now", isOwner: true },
-                                                { name: "Sarah Chen", email: "sarah@company.com", role: "Admin", status: "active", lastActive: "2 hr ago", isOwner: false },
-                                                { name: "Mike Wilson", email: "mike@company.com", role: "Developer", status: "active", lastActive: "1 day ago", isOwner: false },
-                                                { name: "Emily Brown", email: "emily@company.com", role: "Viewer", status: "pending", lastActive: "Invited 3 days ago", isOwner: false },
-                                            ].map((member, i) => (
-                                                <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                            {teamMembers.map((member) => (
+                                                <tr key={member.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                                                     <td className="py-4 px-4">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-9 h-9 bg-gradient-to-br from-zinc-600 to-zinc-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                                                {member.name.split(" ").map(n => n[0]).join("")}
+                                                                {member.avatar || member.name.split(" ").map((n: string) => n[0]).join("")}
                                                             </div>
                                                             <div>
                                                                 <div className="text-white text-sm font-medium flex items-center gap-2">
                                                                     {member.name}
-                                                                    {member.isOwner && <Crown className="w-3.5 h-3.5 text-yellow-500" />}
+                                                                    {member.role === "Owner" && <Crown className="w-3.5 h-3.5 text-yellow-500" />}
                                                                 </div>
                                                                 <div className="text-gray-500 text-xs">{member.email}</div>
                                                             </div>
@@ -1896,7 +2264,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                     <td className="py-4 px-4">
                                                         <span className={`px-2.5 py-1 rounded text-xs font-medium ${
                                                             member.role === "Owner" ? "bg-yellow-500/10 text-yellow-500" :
-                                                            member.role === "Admin" ? "bg-zinc-800/50 text-zinc-500" :
+                                                            member.role === "Admin" ? "bg-zinc-800/50 text-zinc-400" :
                                                             member.role === "Developer" ? "bg-cyan-500/10 text-cyan-500" :
                                                             "bg-gray-500/10 text-gray-500"
                                                         }`}>
@@ -1904,16 +2272,21 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                         </span>
                                                     </td>
                                                     <td className="py-4 px-4">
-                                                        <span className={`inline-flex items-center gap-1.5 text-xs ${member.status === "active" ? "text-emerald-500" : "text-yellow-500"}`}>
+                                                        <span className={`inline-flex items-center gap-1.5 text-xs ${
+                                                            member.status === "active" ? "text-emerald-500" : "text-yellow-500"
+                                                        }`}>
                                                             <span className="w-1.5 h-1.5 rounded-full bg-current" />
                                                             {member.status === "active" ? "Active" : "Pending"}
                                                         </span>
                                                     </td>
-                                                    <td className="py-4 px-4 text-gray-500 text-sm">{member.lastActive}</td>
+                                                    <td className="py-4 px-4 text-gray-500 text-sm">{member.lastActive || "—"}</td>
                                                     <td className="py-4 px-4">
-                                                        {!member.isOwner && (
-                                                            <button className="p-2 hover:bg-white/5 rounded-lg">
-                                                                <MoreVertical className="w-4 h-4 text-gray-500" />
+                                                        {member.role !== "Owner" && (
+                                                            <button 
+                                                                onClick={() => handleRemoveTeamMember(member.id)}
+                                                                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs"
+                                                            >
+                                                                Remove
                                                             </button>
                                                         )}
                                                     </td>
@@ -1936,20 +2309,23 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                             >
                                 {/* Current Plan */}
                                 <div className="bg-gradient-to-r from-emerald-500/10 to-zinc-700/50 border border-emerald-500/20 rounded-xl p-6 mb-6">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                         <div>
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Package className="w-5 h-5 text-emerald-500" />
-                                                <span className="text-white font-semibold text-lg">Pro Plan</span>
+                                                <span className="text-white font-semibold text-lg">{currentPlan} Plan</span>
                                                 <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-500 text-xs rounded">Active</span>
                                             </div>
                                             <p className="text-gray-400 text-sm">50,000 MAA • Unlimited API calls • Priority support</p>
                                             <p className="text-gray-500 text-xs mt-2">Next billing date: February 1, 2026</p>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-left md:text-right">
                                             <div className="text-3xl font-bold text-white">$199</div>
                                             <div className="text-gray-500 text-sm">/month</div>
-                                            <button className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm">
+                                            <button 
+                                                onClick={handleUpgradePlan}
+                                                className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm text-white"
+                                            >
                                                 Upgrade Plan
                                             </button>
                                         </div>
@@ -1957,7 +2333,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 </div>
 
                                 {/* Usage This Period */}
-                                <div className="grid grid-cols-3 gap-4 mb-8">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                                     <div className="bg-[#111] border border-[#222] rounded-xl p-5">
                                         <p className="text-xs text-gray-500 mb-2">Monthly Active Agents</p>
                                         <div className="flex items-end gap-2">
@@ -1990,7 +2366,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 {/* Payment Method */}
                                 <div className="mb-8">
                                     <h3 className="text-white font-medium mb-4">Payment Method</h3>
-                                    <div className="bg-[#111] border border-[#222] rounded-xl p-4 flex items-center justify-between">
+                                    <div className="bg-[#111] border border-[#222] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-8 bg-gradient-to-r from-blue-600 to-blue-400 rounded flex items-center justify-center text-white text-xs font-bold">
                                                 VISA
@@ -2000,7 +2376,10 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                 <p className="text-gray-500 text-xs">Expires 12/2028</p>
                                             </div>
                                         </div>
-                                        <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-sm">
+                                        <button 
+                                            onClick={handleUpdatePayment}
+                                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-sm text-white"
+                                        >
                                             Update
                                         </button>
                                     </div>
@@ -2009,8 +2388,8 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 {/* Invoices */}
                                 <div>
                                     <h3 className="text-white font-medium mb-4">Recent Invoices</h3>
-                                    <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
-                                        <table className="w-full">
+                                    <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden overflow-x-auto">
+                                        <table className="w-full min-w-[500px]">
                                             <thead>
                                                 <tr className="border-b border-[#222] bg-[#0d0d0d] text-left">
                                                     <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
@@ -2021,13 +2400,8 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {[
-                                                    { id: "INV-2026-001", date: "Jan 1, 2026", amount: "$199.00", status: "paid" },
-                                                    { id: "INV-2025-012", date: "Dec 1, 2025", amount: "$199.00", status: "paid" },
-                                                    { id: "INV-2025-011", date: "Nov 1, 2025", amount: "$199.00", status: "paid" },
-                                                    { id: "INV-2025-010", date: "Oct 1, 2025", amount: "$199.00", status: "paid" },
-                                                ].map((invoice, i) => (
-                                                    <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                                {billingHistory.map((invoice) => (
+                                                    <tr key={invoice.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                                                         <td className="py-3.5 px-4">
                                                             <div className="flex items-center gap-2">
                                                                 <Receipt className="w-4 h-4 text-gray-500" />
@@ -2039,11 +2413,14 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                         <td className="py-3.5 px-4">
                                                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-500">
                                                                 <CheckCircle className="w-3 h-3" />
-                                                                Paid
+                                                                {invoice.status}
                                                             </span>
                                                         </td>
                                                         <td className="py-3.5 px-4">
-                                                            <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
+                                                            <button 
+                                                                onClick={() => handleDownloadInvoice(invoice.id)}
+                                                                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs text-white"
+                                                            >
                                                                 <Download className="w-3.5 h-3.5 inline mr-1" />
                                                                 PDF
                                                             </button>
@@ -2070,31 +2447,75 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 <div className="mb-8">
                                     <h3 className="text-white font-medium mb-4">Account Settings</h3>
                                     <div className="bg-[#111] border border-[#222] rounded-xl divide-y divide-[#222]">
-                                        <div className="p-4 flex items-center justify-between">
+                                        <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-white text-sm">Organization Name</p>
                                                 <p className="text-gray-500 text-xs mt-0.5">Your company or project name</p>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className="text-gray-400 text-sm">Acme Corporation</span>
-                                                <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
-                                                    Edit
-                                                </button>
+                                                {editingOrgName ? (
+                                                    <>
+                                                        <input
+                                                            type="text"
+                                                            value={orgName}
+                                                            onChange={(e) => setOrgName(e.target.value)}
+                                                            className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none focus:border-[#555]"
+                                                        />
+                                                        <button 
+                                                            onClick={handleSaveOrgName}
+                                                            className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 rounded-lg text-xs"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-gray-400 text-sm">{orgName}</span>
+                                                        <button 
+                                                            onClick={() => setEditingOrgName(true)}
+                                                            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs text-white"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className="p-4 flex items-center justify-between">
+                                        <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-white text-sm">Organization URL</p>
                                                 <p className="text-gray-500 text-xs mt-0.5">Your unique AgentAuth URL</p>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <code className="text-cyan-400 text-sm">acme.agentauth.in</code>
-                                                <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
-                                                    Edit
-                                                </button>
+                                                {editingOrgUrl ? (
+                                                    <>
+                                                        <input
+                                                            type="text"
+                                                            value={orgUrl}
+                                                            onChange={(e) => setOrgUrl(e.target.value)}
+                                                            className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-cyan-400 text-sm focus:outline-none focus:border-[#555]"
+                                                        />
+                                                        <button 
+                                                            onClick={handleSaveOrgUrl}
+                                                            className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 rounded-lg text-xs"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <code className="text-cyan-400 text-sm">{orgUrl}</code>
+                                                        <button 
+                                                            onClick={() => setEditingOrgUrl(true)}
+                                                            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs text-white"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className="p-4 flex items-center justify-between">
+                                        <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-white text-sm">Timezone</p>
                                                 <p className="text-gray-500 text-xs mt-0.5">Used for reports and analytics</p>
@@ -2114,7 +2535,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 <div className="mb-8">
                                     <h3 className="text-white font-medium mb-4">Authorization Settings</h3>
                                     <div className="bg-[#111] border border-[#222] rounded-xl divide-y divide-[#222]">
-                                        <div className="p-4 flex items-center justify-between">
+                                        <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-white text-sm">Default Daily Limit</p>
                                                 <p className="text-gray-500 text-xs mt-0.5">Maximum spending per agent per day</p>
@@ -2124,7 +2545,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                 <input type="number" defaultValue="1000" className="w-24 px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm text-right focus:outline-none" />
                                             </div>
                                         </div>
-                                        <div className="p-4 flex items-center justify-between">
+                                        <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-white text-sm">Default Monthly Limit</p>
                                                 <p className="text-gray-500 text-xs mt-0.5">Maximum spending per agent per month</p>
@@ -2134,7 +2555,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                 <input type="number" defaultValue="10000" className="w-24 px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm text-right focus:outline-none" />
                                             </div>
                                         </div>
-                                        <div className="p-4 flex items-center justify-between">
+                                        <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-white text-sm">Require Approval Above</p>
                                                 <p className="text-gray-500 text-xs mt-0.5">Transactions above this amount need manual approval</p>
@@ -2151,22 +2572,54 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 <div className="mb-8">
                                     <h3 className="text-white font-medium mb-4">Notifications</h3>
                                     <div className="bg-[#111] border border-[#222] rounded-xl divide-y divide-[#222]">
-                                        {[
-                                            { title: "Transaction Alerts", desc: "Get notified for denied transactions", enabled: true },
-                                            { title: "Consent Requests", desc: "Notify when agents request new permissions", enabled: true },
-                                            { title: "Weekly Reports", desc: "Receive weekly analytics summary", enabled: false },
-                                            { title: "Security Alerts", desc: "Important security notifications", enabled: true },
-                                        ].map((setting, i) => (
-                                            <div key={i} className="p-4 flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-white text-sm">{setting.title}</p>
-                                                    <p className="text-gray-500 text-xs mt-0.5">{setting.desc}</p>
-                                                </div>
-                                                <button className={`w-11 h-6 rounded-full transition-colors ${setting.enabled ? "bg-emerald-500" : "bg-[#333]"}`}>
-                                                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${setting.enabled ? "translate-x-5" : "translate-x-0.5"}`} />
-                                                </button>
+                                        <div className="p-4 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-white text-sm">Transaction Alerts</p>
+                                                <p className="text-gray-500 text-xs mt-0.5">Get notified for denied transactions</p>
                                             </div>
-                                        ))}
+                                            <button 
+                                                onClick={() => handleToggleNotification("transactionAlerts")}
+                                                className={`w-11 h-6 rounded-full transition-colors ${notifications.transactionAlerts ? "bg-emerald-500" : "bg-[#333]"}`}
+                                            >
+                                                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${notifications.transactionAlerts ? "translate-x-5" : "translate-x-0.5"}`} />
+                                            </button>
+                                        </div>
+                                        <div className="p-4 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-white text-sm">Consent Requests</p>
+                                                <p className="text-gray-500 text-xs mt-0.5">Notify when agents request new permissions</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleToggleNotification("consentRequests")}
+                                                className={`w-11 h-6 rounded-full transition-colors ${notifications.consentRequests ? "bg-emerald-500" : "bg-[#333]"}`}
+                                            >
+                                                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${notifications.consentRequests ? "translate-x-5" : "translate-x-0.5"}`} />
+                                            </button>
+                                        </div>
+                                        <div className="p-4 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-white text-sm">Weekly Reports</p>
+                                                <p className="text-gray-500 text-xs mt-0.5">Receive weekly analytics summary</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleToggleNotification("weeklyReports")}
+                                                className={`w-11 h-6 rounded-full transition-colors ${notifications.weeklyReports ? "bg-emerald-500" : "bg-[#333]"}`}
+                                            >
+                                                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${notifications.weeklyReports ? "translate-x-5" : "translate-x-0.5"}`} />
+                                            </button>
+                                        </div>
+                                        <div className="p-4 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-white text-sm">Security Alerts</p>
+                                                <p className="text-gray-500 text-xs mt-0.5">Important security notifications</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleToggleNotification("securityAlerts")}
+                                                className={`w-11 h-6 rounded-full transition-colors ${notifications.securityAlerts ? "bg-emerald-500" : "bg-[#333]"}`}
+                                            >
+                                                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${notifications.securityAlerts ? "translate-x-5" : "translate-x-0.5"}`} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -2174,12 +2627,15 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 <div>
                                     <h3 className="text-red-500 font-medium mb-4">Danger Zone</h3>
                                     <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                             <div>
                                                 <p className="text-white text-sm">Delete Organization</p>
                                                 <p className="text-gray-500 text-xs mt-0.5">Permanently delete your organization and all data</p>
                                             </div>
-                                            <button className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm">
+                                            <button 
+                                                onClick={handleDeleteOrganization}
+                                                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm"
+                                            >
                                                 Delete Organization
                                             </button>
                                         </div>

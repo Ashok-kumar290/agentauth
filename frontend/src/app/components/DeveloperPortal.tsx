@@ -164,7 +164,7 @@ export function DeveloperPortal({ onClose }: DeveloperPortalProps) {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://agentauth.in/portal",
+        redirectTo: `${window.location.origin}/set-password`,
       });
       if (error) {
         setError(error.message);
