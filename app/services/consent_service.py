@@ -53,6 +53,10 @@ class ConsentService:
             seconds=consent_data.options.expires_in_seconds
         )
         
+        # Make timestamps timezone-naive for DB compatibility
+        now_naive = now.replace(tzinfo=None)
+        expires_at_naive = expires_at.replace(tzinfo=None)
+        
         consent_id = generate_consent_id()
         intent_hash = hash_intent(consent_data.intent.description)
         
@@ -82,7 +86,7 @@ class ConsentService:
             scope=scope,
             signature=consent_data.signature,
             public_key=consent_data.public_key,
-            expires_at=expires_at,
+            expires_at=expires_at_naive,
             is_active=True,
         )
         
