@@ -406,8 +406,24 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                             avg_response_time: 8.3,
                             transactions: [],
                         });
-                        if (data.consents_today !== undefined) {
-                            setChartData([0, 0, 0, 0, 0, 0, data.consents_today || 0]);
+                        
+                        // Also fetch analytics for chart data
+                        try {
+                            const analyticsResponse = await fetch(`${BACKEND_URL}/v1/dashboard/analytics?days=7`, {
+                                headers: { 'Content-Type': 'application/json' },
+                            });
+                            if (analyticsResponse.ok) {
+                                const analyticsData = await analyticsResponse.json();
+                                if (analyticsData.analytics && Array.isArray(analyticsData.analytics)) {
+                                    const chartValues = analyticsData.analytics.map((d: { consents: number }) => d.consents || 0);
+                                    setChartData(chartValues);
+                                }
+                            }
+                        } catch (analyticsError) {
+                            console.log("Analytics fetch failed, using fallback");
+                            if (data.consents_today !== undefined) {
+                                setChartData([0, 0, 0, 0, 0, 0, data.consents_today || 0]);
+                            }
                         }
                     } else {
                         // Main /dashboard endpoint format
