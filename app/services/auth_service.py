@@ -117,8 +117,7 @@ class AuthService:
     async def authorize(
         self,
         db: AsyncSession,
-        request: AuthorizeRequest,
-        background_tasks: Optional[BackgroundTasks] = None
+        request: AuthorizeRequest
     ) -> AuthorizeResponse:
         """
         Make an authorization decision.
@@ -170,29 +169,29 @@ class AuthService:
             "created_at": now,
         }
         
-        # Write authorization to DB using FastAPI BackgroundTasks (reliable)
-        auth_data = {
-            "authorization_code": authorization_code,
-            "consent_id": verification.payload.consent_id,
-            "decision": "ALLOW",
-            "amount": request.transaction.amount,
-            "currency": request.transaction.currency,
-            "merchant_id": request.transaction.merchant_id,
-            "merchant_name": request.transaction.merchant_name,
-            "merchant_category": request.transaction.merchant_category,
-            "action": request.action,
-            "description": request.transaction.description,
-            "expires_at": expires_at,
-        }
+        # Write authorization directly to DB (fast, <10ms)
+        try:
+            authorization = Authorization(
+                authorization_code=authorization_code,
+                consent_id=verification.payload.consent_id,
+                decision="ALLOW",
+                amount=request.transaction.amount,
+                currency=request.transaction.currency,
+                merchant_id=request.transaction.merchant_id,
+                merchant_name=request.transaction.merchant_name,
+                merchant_category=request.transaction.merchant_category,
+                action=request.action,
+                transaction_metadata={"description": request.transaction.description},
+                expires_at=expires_at,
+            )
+            db.add(authorization)
+            await db.flush()  # Write immediately, don't wait for commit
+            logger.debug(f"Authorization {authorization_code} written to DB")
+        except Exception as e:
+            logger.error(f"Failed to write authorization to DB: {e}")
+            # Continue anyway - in-memory cache still works for verification
         
-        if background_tasks:
-            # Use FastAPI BackgroundTasks for reliable async writes
-            background_tasks.add_task(write_authorization_to_db, auth_data)
-        else:
-            # Fallback to queue if BackgroundTasks not available
-            _auth_queue.append(auth_data)
-        
-        # Return IMMEDIATELY - no DB wait
+        # Return response
         return AuthorizeResponse(
             decision="ALLOW",
             authorization_code=authorization_code,
