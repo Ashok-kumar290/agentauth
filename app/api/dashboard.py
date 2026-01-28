@@ -287,5 +287,5 @@ async def dashboard_health():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0",
+        "version": "1.0.1",  # Incremented to force redeploy
     }
