@@ -124,7 +124,18 @@ function ContactPage() {
 
 function PortalPage() {
   const navigate = useNavigate();
-  return <DeveloperPortal onClose={() => navigate("/")} />;
+  // Redirect portal users to the full nucleus dashboard
+  useEffect(() => {
+    navigate("/nucleus", { replace: true });
+  }, [navigate]);
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+      <div className="text-center">
+        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-400">Redirecting to Dashboard...</p>
+      </div>
+    </div>
+  );
 }
 
 function YCPage() {

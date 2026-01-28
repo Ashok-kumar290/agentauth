@@ -18,6 +18,103 @@ settings = get_settings()
 router = APIRouter(prefix="/v1/dashboard", tags=["Dashboard"])
 
 
+@router.get("")
+async def get_dashboard(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get complete dashboard data for the frontend.
+    
+    Returns stats, transactions, and chart data in the format expected by the Dashboard component.
+    """
+    try:
+        # Get total consents (as authorizations)
+        total_result = await db.execute(select(func.count(Consent.id)))
+        total_authorizations = total_result.scalar() or 0
+        
+        # Get active consents
+        active_result = await db.execute(
+            select(func.count(Consent.id)).where(Consent.is_active == True)
+        )
+        active_consents = active_result.scalar() or 0
+        
+        # Calculate transaction volume from constraints
+        all_consents = await db.execute(
+            select(Consent.constraints).limit(1000)
+        )
+        constraints_list = all_consents.scalars().all()
+        
+        transaction_volume = 0
+        for constraints in constraints_list:
+            if constraints and isinstance(constraints, dict):
+                max_amount = constraints.get("max_amount", 0)
+                if max_amount:
+                    transaction_volume += max_amount
+        
+        # Calculate approval rate (if we have authorizations)
+        approval_rate = 100.0 if total_authorizations > 0 else 0
+        
+        # Get recent transactions
+        recent_result = await db.execute(
+            select(Consent)
+            .order_by(desc(Consent.created_at))
+            .limit(10)
+        )
+        recent_consents = recent_result.scalars().all()
+        
+        transactions = []
+        for c in recent_consents:
+            constraints = c.constraints or {}
+            scope = c.scope or {}
+            agent_name = scope.get("agent_name", "Agent")
+            transactions.append({
+                "id": c.consent_id,
+                "amount": constraints.get("max_amount", 0),
+                "currency": constraints.get("currency", "USD"),
+                "status": "authorized" if c.is_active else "expired",
+                "merchant": agent_name,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+                "description": c.intent_description or "Authorization",
+            })
+        
+        # Get daily counts for chart (last 7 days)
+        daily_requests = []
+        for i in range(6, -1, -1):
+            day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=i)
+            next_day = day + timedelta(days=1)
+            
+            result = await db.execute(
+                select(func.count(Consent.id)).where(
+                    Consent.created_at >= day,
+                    Consent.created_at < next_day
+                )
+            )
+            count = result.scalar() or 0
+            daily_requests.append(count)
+        
+        return {
+            "total_authorizations": total_authorizations,
+            "transaction_volume": round(transaction_volume, 2),
+            "approval_rate": round(approval_rate, 1),
+            "avg_response_time": 8.3,  # Placeholder - would need actual timing data
+            "transactions": transactions,
+            "active_consents": active_consents,
+            "daily_requests": daily_requests,
+        }
+    except Exception as e:
+        # Return empty state on error
+        return {
+            "total_authorizations": 0,
+            "transaction_volume": 0,
+            "approval_rate": 0,
+            "avg_response_time": 0,
+            "transactions": [],
+            "active_consents": 0,
+            "daily_requests": [0, 0, 0, 0, 0, 0, 0],
+            "error": str(e),
+        }
+
+
 @router.get("/stats")
 async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
@@ -109,10 +206,13 @@ async def get_transactions(
         transactions = []
         for c in consents:
             constraints = c.constraints or {}
+            # Note: agent_id is not in Consent model, extract from scope if available
+            scope = c.scope or {}
+            agent_name = scope.get("agent_name", "Agent")
             transactions.append({
                 "id": c.consent_id,
                 "user_id": c.user_id,
-                "agent_id": c.agent_id,
+                "developer_id": c.developer_id,
                 "intent": c.intent_description,
                 "max_amount": constraints.get("max_amount", 0),
                 "currency": constraints.get("currency", "USD"),

@@ -119,18 +119,21 @@ const StatCard = ({
     change: string;
     positive?: boolean;
     icon: React.ElementType;
-}) => (
-    <div className="bg-[#111] border border-[#222] rounded-xl p-5">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
-            <Icon className="w-3.5 h-3.5" />
-            {label}
+}) => {
+    const isNoData = change === "No data yet" || value === "0" || value === "$0.00" || value === "—";
+    return (
+        <div className="bg-[#111] border border-[#222] rounded-xl p-4 sm:p-5">
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                <Icon className="w-3.5 h-3.5" />
+                <span className="truncate">{label}</span>
+            </div>
+            <div className="text-2xl sm:text-3xl font-semibold text-white mb-1">{value}</div>
+            <div className={`text-xs flex items-center gap-1 ${isNoData ? "text-gray-500" : positive ? "text-emerald-500" : "text-red-500"}`}>
+                {!isNoData && (positive ? "↑" : "↓")} {change}
+            </div>
         </div>
-        <div className="text-3xl font-semibold text-white mb-1">{value}</div>
-        <div className={`text-xs flex items-center gap-1 ${positive ? "text-emerald-500" : "text-red-500"}`}>
-            {positive ? "↑" : "↓"} {change}
-        </div>
-    </div>
-);
+    );
+};
 
 // Usage Bar Component
 const UsageBar = ({
@@ -322,31 +325,106 @@ const pageTitles: Record<NavSection, string> = {
     "connected-accounts": "Connected Accounts",
 };
 
+// Production backend URL
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://characteristic-inessa-agentauth-0a540dd6.koyeb.app";
+
 // Main Dashboard Component
 export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess = false }: DashboardProps) {
     const [activeNav, setActiveNav] = useState<NavSection>(checkoutSuccess ? "account" : "dashboard");
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [period, setPeriod] = useState("7d");
-    const [chartData, setChartData] = useState([65, 80, 45, 90, 70, 55, 40]);
+    const [chartData, setChartData] = useState([0, 0, 0, 0, 0, 0, 0]);
     const [showWelcome, setShowWelcome] = useState(checkoutSuccess);
+    const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
     
     // Connected accounts state
     const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectError, setConnectError] = useState("");
 
+    // Check backend health on mount
+    useEffect(() => {
+        const checkBackend = async () => {
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`, { 
+                    method: 'GET',
+                    signal: AbortSignal.timeout(5000)
+                });
+                if (response.ok) {
+                    setBackendStatus("online");
+                } else {
+                    setBackendStatus("offline");
+                }
+            } catch {
+                setBackendStatus("offline");
+            }
+        };
+        checkBackend();
+    }, []);
+
     const fetchData = async () => {
         try {
             setIsLoading(true);
-            const apiBase = window.location.hostname === "localhost" ? "http://localhost:8000" : window.location.origin;
-            const response = await fetch(`${apiBase}/.netlify/functions/get-stripe-transactions?period=${period}&limit=20`);
-            if (response.ok) {
-                const data = await response.json();
-                setStats(data);
+            
+            // For new users or users without data, show empty state
+            if (!user?.id && !isAdminMode) {
+                setStats({
+                    total_authorizations: 0,
+                    transaction_volume: 0,
+                    approval_rate: 0,
+                    avg_response_time: 0,
+                    transactions: [],
+                });
+                return;
             }
+
+            // Fetch from backend API - main dashboard endpoint returns everything
+            try {
+                const response = await fetch(`${BACKEND_URL}/v1/dashboard`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    // Map backend response to frontend format
+                    setStats({
+                        total_authorizations: data.total_authorizations || 0,
+                        transaction_volume: data.transaction_volume || 0,
+                        approval_rate: data.approval_rate || 0,
+                        avg_response_time: data.avg_response_time || 0,
+                        transactions: data.transactions || [],
+                    });
+                    // Update chart with real daily request data
+                    if (data.daily_requests && Array.isArray(data.daily_requests)) {
+                        setChartData(data.daily_requests);
+                    }
+                    return;
+                }
+            } catch (backendError) {
+                console.log("Backend not available, showing empty state");
+            }
+
+            // Fallback: Show empty state for new users
+            setStats({
+                total_authorizations: 0,
+                transaction_volume: 0,
+                approval_rate: 0,
+                avg_response_time: 0,
+                transactions: [],
+            });
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
+            // Show empty state on error
+            setStats({
+                total_authorizations: 0,
+                transaction_volume: 0,
+                approval_rate: 0,
+                avg_response_time: 0,
+                transactions: [],
+            });
         } finally {
             setIsLoading(false);
         }
@@ -527,13 +605,33 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                             </div>
                         </div>
                     )}
-                    <div className="flex items-center gap-2 bg-white/5 p-3 rounded-lg">
+                    <div className="flex items-center gap-2 bg-white/5 p-3 rounded-lg mb-3">
                         <Zap className="w-4 h-4 text-emerald-500" />
                         <div>
                             <div className="text-sm font-medium text-emerald-500">Pro Plan</div>
                             <div className="text-xs text-gray-500">
                                 {stats?.total_authorizations || 0} / 50,000 MAA
                             </div>
+                        </div>
+                    </div>
+                    {/* Backend Status */}
+                    <div className="flex items-center gap-2 bg-white/5 p-3 rounded-lg">
+                        <div className={`w-2 h-2 rounded-full ${
+                            backendStatus === "online" ? "bg-emerald-500" : 
+                            backendStatus === "offline" ? "bg-red-500" : 
+                            "bg-yellow-500 animate-pulse"
+                        }`} />
+                        <div>
+                            <div className={`text-xs font-medium ${
+                                backendStatus === "online" ? "text-emerald-500" : 
+                                backendStatus === "offline" ? "text-red-400" : 
+                                "text-yellow-500"
+                            }`}>
+                                {backendStatus === "online" ? "API Online" : 
+                                 backendStatus === "offline" ? "API Offline" : 
+                                 "Checking..."}
+                            </div>
+                            <div className="text-[10px] text-gray-600 truncate">Koyeb Backend</div>
                         </div>
                     </div>
                 </div>
@@ -585,34 +683,89 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
                             >
+                                {/* Onboarding Banner for New Users */}
+                                {connectedAccounts.length === 0 && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="mb-8 bg-gradient-to-r from-[#635BFF]/20 via-[#0ea5e9]/20 to-[#10b981]/20 border border-[#635BFF]/30 rounded-2xl p-6"
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-14 h-14 bg-[#635BFF]/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                                <Landmark className="w-7 h-7 text-[#635BFF]" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h2 className="text-xl font-semibold text-white mb-2">Welcome to AgentAuth! 🚀</h2>
+                                                <p className="text-gray-400 mb-4">
+                                                    Connect your Stripe account to start accepting payments from AI agents. 
+                                                    This enables your agents to make authorized purchases on your behalf.
+                                                </p>
+                                                <div className="flex items-center gap-3">
+                                                    <button 
+                                                        onClick={handleConnectStripe}
+                                                        disabled={isConnecting}
+                                                        className="flex items-center gap-2 px-5 py-2.5 bg-[#635BFF] hover:bg-[#5851ea] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                                    >
+                                                        {isConnecting ? (
+                                                            <>
+                                                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                                                Connecting...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                                                    <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+                                                                </svg>
+                                                                Connect Stripe Account
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setActiveNav("connected-accounts")}
+                                                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-sm text-gray-300 transition-colors"
+                                                    >
+                                                        Learn More
+                                                    </button>
+                                                </div>
+                                                {connectError && (
+                                                    <div className="mt-3 flex items-center gap-2 text-red-400 text-sm">
+                                                        <AlertTriangle className="w-4 h-4" />
+                                                        {connectError}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+
                                 {/* Stats Grid */}
                                 <div className="grid grid-cols-4 gap-4 mb-8">
                                     <StatCard
                                         label="Total Authorizations"
                                         value={stats?.total_authorizations?.toLocaleString() || "0"}
-                                        change="+12.5% from last month"
-                                        positive
+                                        change={stats?.total_authorizations ? "+12.5% from last month" : "No data yet"}
+                                        positive={!!stats?.total_authorizations}
                                         icon={Shield}
                                     />
                                     <StatCard
                                         label="Transaction Volume"
                                         value={formatCurrency(stats?.transaction_volume || 0)}
-                                        change="+8.2% from last month"
-                                        positive
+                                        change={stats?.transaction_volume ? "+8.2% from last month" : "No data yet"}
+                                        positive={!!stats?.transaction_volume}
                                         icon={CreditCard}
                                     />
                                     <StatCard
                                         label="Approval Rate"
-                                        value={`${stats?.approval_rate || 0}%`}
-                                        change="+0.3% from last month"
-                                        positive
+                                        value={stats?.total_authorizations ? `${stats?.approval_rate || 0}%` : "—"}
+                                        change={stats?.total_authorizations ? "+0.3% from last month" : "No data yet"}
+                                        positive={!!stats?.total_authorizations}
                                         icon={Shield}
                                     />
                                     <StatCard
                                         label="Avg Response Time"
-                                        value={`${stats?.avg_response_time || 8.3}ms`}
-                                        change="-1.2ms improvement"
-                                        positive
+                                        value={stats?.total_authorizations ? `${stats?.avg_response_time || 8.3}ms` : "—"}
+                                        change={stats?.total_authorizations ? "-1.2ms improvement" : "No data yet"}
+                                        positive={!!stats?.total_authorizations}
                                         icon={Clock}
                                     />
                                 </div>
@@ -639,13 +792,12 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                     />
                                     <UsageBar
                                         title="API Requests"
-                                        used={847293}
+                                        used={0}
                                         total={1000000}
-                                        variant="danger"
                                     />
                                     <UsageBar
                                         title="Webhook Deliveries"
-                                        used={12384}
+                                        used={0}
                                         total={100000}
                                     />
                                 </div>
@@ -669,18 +821,17 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                                 + New
                                             </button>
                                         </div>
-                                        <ApiKeyCard
-                                            name="Production Key"
-                                            createdAt="Created Jan 15, 2026"
-                                            keyPreview="aa_live_****...k8Jx"
-                                            isLive={true}
-                                        />
-                                        <ApiKeyCard
-                                            name="Test Key"
-                                            createdAt="Created Jan 10, 2026"
-                                            keyPreview="aa_test_****...m2Pq"
-                                            isLive={false}
-                                        />
+                                        {/* Empty state for new users */}
+                                        <div className="bg-[#111] border border-[#222] border-dashed rounded-xl p-6 text-center">
+                                            <Key className="w-8 h-8 text-gray-600 mx-auto mb-3" />
+                                            <p className="text-gray-400 text-sm mb-3">No API keys yet</p>
+                                            <button 
+                                                onClick={() => setActiveNav("apikeys")}
+                                                className="px-4 py-2 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium transition-colors"
+                                            >
+                                                Create Your First Key
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Recent Transactions */}

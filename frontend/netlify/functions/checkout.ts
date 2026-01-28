@@ -88,14 +88,19 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             customerId = customer.id;
         }
 
-        // Create Checkout Session
+        // Create Checkout Session with Stripe Link enabled
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
-            payment_method_types: ["card"],
+            payment_method_types: ["card", "link"],
             line_items: [{ price: priceId, quantity: 1 }],
             mode: "subscription",
             success_url: successUrl || "https://agentauth.in/nucleus?checkout=success",
             cancel_url: cancelUrl || "https://agentauth.in/?checkout=canceled",
+            payment_method_options: {
+                link: {
+                    persistent_token: undefined, // Enable Link for new customers
+                },
+            },
             metadata: {
                 user_id: userId || "",
                 plan,

@@ -2,13 +2,16 @@
  * API Configuration
  * 
  * Centralized API URL configuration for the AgentAuth frontend.
- * Uses environment variable VITE_API_URL, with fallback for development.
+ * Uses environment variable VITE_API_URL, with fallback for production.
  */
 
+// Production backend URL on Koyeb
+const PRODUCTION_BACKEND = "https://characteristic-inessa-agentauth-0a540dd6.koyeb.app";
+
 /**
- * Get the base API URL from environment or use fallback
+ * Get the base API URL from environment or use production fallback
  */
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export const API_BASE_URL = import.meta.env.VITE_API_URL || PRODUCTION_BACKEND;
 
 /**
  * Check if we're in development mode
