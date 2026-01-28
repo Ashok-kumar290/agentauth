@@ -112,7 +112,7 @@ async def create_consent(
         logger.error(f"Failed to create consent: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create consent"
+            detail=f"Failed to create consent: {type(e).__name__}: {str(e)}"
         )
 
 
