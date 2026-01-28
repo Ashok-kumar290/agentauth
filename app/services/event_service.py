@@ -3,8 +3,14 @@ AgentAuth Event Streaming Service
 
 CloudEvents specification compliant event streaming.
 Delivers webhooks to subscribers when events occur.
-"""
 
+Features:
+- CloudEvents 1.0 compliant payloads
+- Async webhook delivery with retries
+- Event filtering by type
+- Delivery confirmation tracking
+"""
+import logging
 import uuid
 import json
 import asyncio
@@ -17,6 +23,7 @@ import httpx
 
 from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 

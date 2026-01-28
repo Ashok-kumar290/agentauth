@@ -12,6 +12,7 @@ from typing import Optional
 from app.config import get_settings
 from app.models.database import get_db
 from app.models.consent import Consent
+from app.models.authorization import Authorization
 
 settings = get_settings()
 
@@ -261,12 +262,21 @@ async def get_analytics(
                     Consent.created_at < next_day
                 )
             )
-            count = result.scalar() or 0
+            consent_count = result.scalar() or 0
+            
+            # Count authorizations for this day
+            auth_result = await db.execute(
+                select(func.count(Authorization.id)).where(
+                    Authorization.created_at >= day,
+                    Authorization.created_at < next_day
+                )
+            )
+            auth_count = auth_result.scalar() or 0
             
             analytics.append({
                 "date": day.strftime("%Y-%m-%d"),
-                "consents": count,
-                "authorizations": 0,  # TODO: Add when authorization tracking is implemented
+                "consents": consent_count,
+                "authorizations": auth_count,
             })
         
         return {

@@ -3,6 +3,7 @@ Consents API - POST /v1/consents
 
 Create user consents and get delegation tokens.
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -11,6 +12,8 @@ from app.models.database import get_db
 from app.models.consent import Consent
 from app.schemas.consent import ConsentCreate, ConsentResponse
 from app.services.consent_service import consent_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/consents", tags=["Consents"])
 
@@ -66,7 +69,8 @@ async def list_consents(
             "offset": offset,
         }
     except Exception as e:
-        return {"consents": [], "total": 0, "error": str(e)}
+        logger.error(f"Error listing consents: {e}", exc_info=True)
+        return {"consents": [], "total": 0, "error": "Failed to list consents"}
 
 
 @router.post(
@@ -98,10 +102,17 @@ async def create_consent(
     try:
         response = await consent_service.create_consent(db, consent_data)
         return response
+    except ValueError as e:
+        logger.warning(f"Consent validation error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid consent data: {str(e)}"
+        )
     except Exception as e:
+        logger.error(f"Failed to create consent: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create consent: {str(e)}"
+            detail="Failed to create consent"
         )
 
 

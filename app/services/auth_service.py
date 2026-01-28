@@ -8,6 +8,7 @@ OPTIMIZED for <10ms latency:
 """
 import asyncio
 import secrets
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from collections import deque
@@ -21,6 +22,7 @@ from app.services.token_service import token_service
 from app.services.consent_service import consent_service
 from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # In-memory LRU cache for consents (faster than Redis for single-instance)
@@ -191,15 +193,32 @@ class AuthService:
     async def check_step_up_required(
         self,
         consent_id: str,
-        amount: float
+        amount: float,
+        consent_max_amount: Optional[float] = None
     ) -> bool:
         """
         Check if step-up authentication is required.
         
-        For MVP, always returns False.
-        Future: configurable thresholds per user/consent.
+        Step-up is triggered when:
+        1. Amount exceeds 80% of consent limit (high-value transaction)
+        2. Transaction is from a new/unusual merchant (future: anomaly detection)
+        3. User has configured step-up for certain thresholds
+        
+        Returns True if additional user verification is needed.
         """
-        # TODO: Implement step-up logic
+        # High-value transaction threshold: 80% of max authorized
+        if consent_max_amount and amount > 0:
+            usage_ratio = amount / consent_max_amount
+            if usage_ratio >= 0.80:
+                logger.info(f"Step-up required: amount ${amount} is {usage_ratio:.0%} of limit ${consent_max_amount}")
+                return True
+        
+        # Absolute threshold: transactions over $500 require step-up
+        STEP_UP_THRESHOLD = 500.0
+        if amount >= STEP_UP_THRESHOLD:
+            logger.info(f"Step-up required: amount ${amount} exceeds ${STEP_UP_THRESHOLD} threshold")
+            return True
+        
         return False
 
 

@@ -68,15 +68,15 @@ pip install agentauth-client
 ```
 
 ```python
-from agentauth import AgentAuthClient
+from agentauth import AgentAuth
 
-client = AgentAuthClient(
-    api_url="https://api.agentauth.in",
+client = AgentAuth(
+    base_url="https://characteristic-inessa-agentauth-0a540dd6.koyeb.app",
     api_key="your_api_key"
 )
 
 # User creates consent
-consent = client.create_consent(
+consent = client.consents.create(
     user_id="user_123",
     intent="Buy cheapest flight to NYC",
     max_amount=500,
@@ -85,12 +85,13 @@ consent = client.create_consent(
 
 # Agent requests authorization
 auth = client.authorize(
-    delegation_token=consent.delegation_token,
+    token=consent.delegation_token,
     amount=347,
+    currency="USD",
     merchant_id="delta_airlines"
 )
 
-if auth.decision == "ALLOW":
+if auth.allowed:
     # Proceed with purchase
     print(f"Authorized: {auth.authorization_code}")
 ```

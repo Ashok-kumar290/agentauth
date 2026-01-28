@@ -80,7 +80,7 @@ function HomePage() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const handleSelectPlan = (planId: string) => setSelectedPlan(planId);
   const handleCloseModal = () => setSelectedPlan(null);
-  const handlePaymentSuccess = (p: string) => { console.log(`Payment for ${PLAN_DETAILS[p]?.name}`); setSelectedPlan(null); };
+  const handlePaymentSuccess = (_p: string) => { setSelectedPlan(null); };
 
   return (
     <div className="min-h-screen bg-black">

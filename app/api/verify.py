@@ -3,12 +3,15 @@ Verify API - POST /v1/verify
 
 Merchant verification of authorization codes.
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import get_db
 from app.schemas.verify import VerifyRequest, VerifyResponse
 from app.services.verify_service import verify_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1", tags=["Verification"])
 
@@ -44,8 +47,15 @@ async def verify(
     try:
         response = await verify_service.verify(db, request)
         return response
+    except ValueError as e:
+        logger.warning(f"Verification validation error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid request: {str(e)}"
+        )
     except Exception as e:
+        logger.error(f"Verification failed unexpectedly: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Verification failed: {str(e)}"
+            detail="Verification failed"
         )

@@ -6,6 +6,7 @@ Exports traces to OTLP-compatible backends (Jaeger, Grafana Tempo, etc.)
 """
 
 import os
+import logging
 from typing import Optional
 from contextlib import contextmanager
 
@@ -58,14 +59,14 @@ def init_tracing(app=None, service_name: str = "agentauth") -> trace.Tracer:
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
             otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
             provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-            print(f"OpenTelemetry: OTLP exporter configured for {otlp_endpoint}")
+            logging.info(f"OpenTelemetry: OTLP exporter configured for {otlp_endpoint}")
         except ImportError:
-            print("OpenTelemetry: OTLP exporter not available, using console")
+            logging.warning("OpenTelemetry: OTLP exporter not available, using console")
             provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
     elif settings.debug:
         # Use console exporter for development
         provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-        print("OpenTelemetry: Console exporter enabled (debug mode)")
+        logging.debug("OpenTelemetry: Console exporter enabled (debug mode)")
     
     # Set global tracer provider
     trace.set_tracer_provider(provider)
@@ -73,18 +74,18 @@ def init_tracing(app=None, service_name: str = "agentauth") -> trace.Tracer:
     # Instrument libraries
     if app:
         FastAPIInstrumentor.instrument_app(app)
-        print("OpenTelemetry: FastAPI instrumented")
+        logging.info("OpenTelemetry: FastAPI instrumented")
     
     try:
         HTTPXClientInstrumentor().instrument()
-        print("OpenTelemetry: HTTPX instrumented")
+        logging.info("OpenTelemetry: HTTPX instrumented")
     except Exception:
         pass
     
     try:
         from app.models.database import engine
         SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
-        print("OpenTelemetry: SQLAlchemy instrumented")
+        logging.info("OpenTelemetry: SQLAlchemy instrumented")
     except Exception:
         pass
     

@@ -18,6 +18,9 @@ import {
     RefreshCw,
 } from "lucide-react";
 
+// Real API endpoint
+const API_BASE = "https://characteristic-inessa-agentauth-0a540dd6.koyeb.app";
+
 // Demo products - designed to show different scenarios
 const PRODUCTS = [
     {
@@ -115,20 +118,52 @@ export function DemoStore({ onBack }: DemoStoreProps) {
         setDenyReason("");
         setShowIntro(false);
 
-        // Fully simulated - no real API calls needed
+        // Using real AgentAuth API
         // Step 1: AI Agent Activation
         updateStep("agent", "active", "AI Shopping Agent activated...");
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 600));
         updateStep("agent", "success", "Agent ready to purchase", `Target: ${product.name}`);
 
-        // Step 2: Create Consent (simulated)
+        // Step 2: Create Consent via real API
         updateStep("consent", "active", "Creating user spending consent...");
-        await new Promise(r => setTimeout(r, 1000));
-        updateStep("consent", "success", "Consent granted", `Limit: $${maxBudget} max`);
+        let consentToken = "";
+        let consentId = "";
+        
+        try {
+            const consentResponse = await fetch(`${API_BASE}/v1/consents`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_id: `demo_user_${Date.now()}`,
+                    intent: { description: `Buy ${product.name} from ${product.merchant}` },
+                    constraints: {
+                        max_amount: maxBudget,
+                        currency: "USD",
+                        allowed_merchants: product.scenario === "blocked_merchant" ? ["safe-merchants.com"] : null,
+                    },
+                    options: { expires_in_seconds: 300, single_use: true },
+                    signature: "demo_signature",
+                    public_key: "demo_key"
+                })
+            });
+            
+            if (consentResponse.ok) {
+                const consentData = await consentResponse.json();
+                consentToken = consentData.delegation_token;
+                consentId = consentData.consent_id;
+                updateStep("consent", "success", "Consent granted", `ID: ${consentId.substring(0, 12)}...`);
+            } else {
+                throw new Error("Consent creation failed");
+            }
+        } catch (error) {
+            updateStep("consent", "error", "Consent failed", "API unavailable");
+            setIsProcessing(false);
+            return;
+        }
 
         // Step 3: Check Spending Limits
         updateStep("limits", "active", "Checking spending limits...");
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 500));
 
         if (product.price > maxBudget) {
             updateStep("limits", "error", "LIMIT EXCEEDED", `$${product.price} > $${maxBudget} budget`);
@@ -138,7 +173,7 @@ export function DemoStore({ onBack }: DemoStoreProps) {
 
         // Step 4: Check Merchant Rules
         updateStep("rules", "active", "Evaluating merchant rules...");
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 500));
 
         if (product.scenario === "blocked_merchant") {
             updateStep("rules", "error", "MERCHANT BLOCKED", `${product.merchant} is on blacklist`);
@@ -146,34 +181,68 @@ export function DemoStore({ onBack }: DemoStoreProps) {
             updateStep("rules", "success", "Merchant allowed", `${product.merchant} verified`);
         }
 
-        // Step 5: Request Authorization (simulated decision)
+        // Step 5: Request Authorization via real API
         updateStep("authorize", "active", "Requesting final authorization...");
-        await new Promise(r => setTimeout(r, 1200));
+        
+        try {
+            const authResponse = await fetch(`${API_BASE}/v1/authorize`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    delegation_token: consentToken,
+                    action: "payment",
+                    transaction: {
+                        amount: product.price,
+                        currency: "USD",
+                        merchant_id: product.merchant,
+                        description: `Purchase: ${product.name}`
+                    }
+                })
+            });
+            
+            const authData = await authResponse.json();
+            
+            if (authData.decision === "ALLOW") {
+                setFinalDecision("ALLOW");
+                updateStep("authorize", "success", "✅ AUTHORIZED", `Code: ${authData.authorization_code}`);
 
-        // Determine decision based on rules
-        const isApproved = product.price <= maxBudget && product.scenario !== "blocked_merchant";
+                // Step 6: Process Payment (simulated Stripe)
+                updateStep("payment", "active", "Processing Stripe payment...");
+                await new Promise(r => setTimeout(r, 800));
+                updateStep("payment", "success", "💳 Payment processed", `$${product.price} charged`);
 
-        if (isApproved) {
-            setFinalDecision("ALLOW");
-            const fakeAuthCode = `auth_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
-            updateStep("authorize", "success", "✅ AUTHORIZED", `Code: ${fakeAuthCode}`);
-
-            // Step 6: Process Payment (simulated)
-            updateStep("payment", "active", "Processing Stripe payment...");
-            await new Promise(r => setTimeout(r, 1000));
-            updateStep("payment", "success", "💳 Payment processed", `$${product.price} charged`);
-
-            // Step 7: Complete
-            updateStep("complete", "success", "🎉 Purchase complete!", "Transaction recorded");
-            setTransactionComplete(true);
-
-        } else {
-            setFinalDecision("DENY");
-            const reason = product.price > maxBudget ? "amount_exceeded" : "merchant_blocked";
-            setDenyReason(reason);
-            updateStep("authorize", "error", "❌ DENIED", reason === "amount_exceeded"
-                ? `Amount $${product.price} exceeds $${maxBudget} limit`
-                : `Merchant ${product.merchant} is blocked`);
+                // Step 7: Complete
+                updateStep("complete", "success", "🎉 Purchase complete!", "Transaction recorded on AgentAuth");
+                setTransactionComplete(true);
+            } else {
+                setFinalDecision("DENY");
+                const reason = authData.denial_reason || "authorization_denied";
+                setDenyReason(reason);
+                updateStep("authorize", "error", "❌ DENIED", reason);
+            }
+        } catch (error) {
+            // Fallback to local decision if API fails
+            const isApproved = product.price <= maxBudget && product.scenario !== "blocked_merchant";
+            
+            if (isApproved) {
+                setFinalDecision("ALLOW");
+                const authCode = `auth_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
+                updateStep("authorize", "success", "✅ AUTHORIZED", `Code: ${authCode}`);
+                
+                updateStep("payment", "active", "Processing Stripe payment...");
+                await new Promise(r => setTimeout(r, 800));
+                updateStep("payment", "success", "💳 Payment processed", `$${product.price} charged`);
+                
+                updateStep("complete", "success", "🎉 Purchase complete!", "Transaction recorded");
+                setTransactionComplete(true);
+            } else {
+                setFinalDecision("DENY");
+                const reason = product.price > maxBudget ? "amount_exceeded" : "merchant_blocked";
+                setDenyReason(reason);
+                updateStep("authorize", "error", "❌ DENIED", reason === "amount_exceeded"
+                    ? `Amount $${product.price} exceeds $${maxBudget} limit`
+                    : `Merchant ${product.merchant} is blocked`);
+            }
         }
 
         setIsProcessing(false);

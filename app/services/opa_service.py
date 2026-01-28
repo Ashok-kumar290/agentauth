@@ -1,16 +1,23 @@
 """
 AgentAuth OPA (Open Policy Agent) Integration
 
-Enterprise-grade policy management using OPA.
-Enables complex, declarative authorization policies.
+DEMO/SIMULATION MODE: This is a demonstration implementation.
+For production use, connect to a real OPA server:
+  docker run -p 8181:8181 openpolicyagent/opa:latest run --server
 
-Features:
-- Rego policy evaluation
-- Policy bundles
-- Decision logging
-- Policy testing
+This demo implementation provides:
+- Simulated Rego policy evaluation
+- Pre-defined AgentAuth policies
+- Compatible interface for testing
+
+Production features (with real OPA):
+- External policy bundles
+- Decision logging to external systems
+- Policy testing framework
+
+See: https://www.openpolicyagent.org/
 """
-
+import logging
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -19,7 +26,11 @@ import httpx
 
 from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# Flag to indicate demo mode
+DEMO_MODE = True
 
 
 @dataclass

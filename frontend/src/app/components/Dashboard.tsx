@@ -485,7 +485,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                                 }
                             }
                         } catch (analyticsError) {
-                            console.log("Analytics fetch failed, using fallback");
+                            // Analytics fetch failed, use fallback from stats
                             if (data.consents_today !== undefined) {
                                 setChartData([0, 0, 0, 0, 0, 0, data.consents_today || 0]);
                             }
@@ -506,7 +506,7 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
                     return;
                 }
             } catch (backendError) {
-                console.log("Backend not available, showing empty state");
+                // Backend not available, showing empty state
             }
 
             // Fallback: Show empty state for new users
@@ -725,7 +725,6 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
             setConsents(prev => prev.map(c => 
                 c.consent_id === consentId ? { ...c, is_active: true, status: "approved" } : c
             ));
-            console.log("Approved consent:", consentId);
         } catch (error) {
             console.error("Failed to approve consent:", error);
         }
@@ -734,7 +733,6 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
     const handleDenyConsent = async (consentId: string) => {
         try {
             setConsents(prev => prev.filter(c => c.consent_id !== consentId));
-            console.log("Denied consent:", consentId);
         } catch (error) {
             console.error("Failed to deny consent:", error);
         }
@@ -745,7 +743,6 @@ export function Dashboard({ user, isAdminMode = false, onLogout, checkoutSuccess
             setConsents(prev => prev.map(c => 
                 c.consent_id === consentId ? { ...c, is_active: false } : c
             ));
-            console.log("Revoked consent:", consentId);
         } catch (error) {
             console.error("Failed to revoke consent:", error);
         }

@@ -1,15 +1,23 @@
 """
 AgentAuth Biscuit Token Service
 
-Cryptographic delegation tokens using Biscuit (Ed25519 signatures).
-Features:
+DEMO/SIMULATION MODE: This is a demonstration implementation.
+For production use, install the actual biscuit-python package:
+  pip install biscuit-auth
+
+This demo implementation provides:
+- Compatible interface for development/testing
+- Simulated Ed25519 signatures
+- Datalog-style authorization policies
+
+Production features (with real biscuit-auth):
 - Offline attenuation (scope down permissions without server)
-- Datalog-based authorization policies
+- Actual Ed25519 cryptographic verification
 - Stateless verification with public key
 
 See: https://biscuitsec.org/
 """
-
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, field
@@ -18,6 +26,11 @@ import secrets
 import hashlib
 import json
 import base64
+
+logger = logging.getLogger(__name__)
+
+# Flag to indicate demo mode
+DEMO_MODE = True
 
 # Note: In production, use biscuit-python package
 # pip install biscuit-auth

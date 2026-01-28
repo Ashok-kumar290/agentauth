@@ -3,12 +3,15 @@ Authorize API - POST /v1/authorize
 
 Real-time authorization decisions for agent actions.
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import get_db
 from app.schemas.authorize import AuthorizeRequest, AuthorizeResponse
 from app.services.auth_service import auth_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1", tags=["Authorization"])
 
@@ -50,8 +53,15 @@ async def authorize(
     try:
         response = await auth_service.authorize(db, request)
         return response
+    except ValueError as e:
+        logger.warning(f"Authorization validation error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid request: {str(e)}"
+        )
     except Exception as e:
+        logger.error(f"Authorization failed unexpectedly: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Authorization failed: {str(e)}"
+            detail="Authorization service error"
         )

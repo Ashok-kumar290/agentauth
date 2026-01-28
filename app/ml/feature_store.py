@@ -1,16 +1,25 @@
 """
 AgentAuth ML Feature Store
 
-Real-time feature store backed by Redis for ML model inference.
+DEMO/SIMULATION MODE: This is a demonstration implementation.
+For production use, integrate with a real feature store:
+  - Redis for real-time features
+  - Feast for batch features
+  - AWS SageMaker Feature Store
+
+This demo implementation provides:
+- Simulated user behavior vectors
+- Static transaction history aggregates
+- Compatible interface for testing
+
+Production features:
+- Real-time feature computation from Redis
+- Feature versioning and lineage
+- Batch feature pipelines
+
 Targets <100ms latency for fraud detection.
-
-Features:
-- User behavior vectors
-- Transaction history aggregates
-- Real-time feature computation
-- Feature versioning
 """
-
+import logging
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, field
@@ -20,7 +29,11 @@ import asyncio
 
 from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# Flag to indicate demo mode
+DEMO_MODE = True
 
 
 @dataclass

@@ -1,16 +1,18 @@
 """
 AgentAuth Fraud Detection Model
 
-Deep neural network for real-time fraud detection.
+DEMO/SIMULATION MODE: This is a demonstration implementation.
+For production use, integrate with a real ML model service (e.g., AWS SageMaker,
+Vertex AI, or a custom trained model).
+
+Architecture:
+- Lightweight MLP implementation (no external ML dependencies)
+- Provides realistic fraud scoring for demos
+- Production would use ONNX or TensorFlow Serving
+
 Target: <100ms inference latency.
-
-Features:
-- Lightweight MLP architecture (no heavy dependencies)
-- ONNX-compatible design
-- Batch inference support
-- Model versioning
 """
-
+import logging
 from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass, field
 import json
@@ -19,6 +21,11 @@ import random
 from datetime import datetime, timezone
 
 from app.ml.feature_store import get_feature_store, get_fraud_features
+
+logger = logging.getLogger(__name__)
+
+# Flag to indicate demo mode
+DEMO_MODE = True
 
 
 @dataclass
