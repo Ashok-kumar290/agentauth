@@ -2,7 +2,7 @@
 Audit log model - immutable record of all authorization events
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import String, Text, DateTime, JSON
@@ -52,8 +52,8 @@ class AuditLog(Base):
     
     # Timestamp
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
         index=True
     )

@@ -5,7 +5,7 @@ This is the heart of AgentAuth. Tokens encode consent constraints
 and allow offline verification without database lookups.
 """
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from dataclasses import dataclass
 
@@ -70,7 +70,7 @@ class TokenService:
         The token itself contains all constraints needed for authorization
         decisions, enabling offline verification.
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         if expires_at is None:
             expires_at = now + timedelta(seconds=settings.token_expiry_seconds)

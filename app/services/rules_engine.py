@@ -5,7 +5,7 @@ Evaluates authorization requests against user-defined spending limits,
 merchant whitelists/blacklists, and category rules.
 """
 import fnmatch
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from dataclasses import dataclass
@@ -60,7 +60,7 @@ class RulesEngine:
         
         Returns decision with allow/deny and reason.
         """
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         rules_evaluated = 0
         
         # Get user's spending limits
@@ -289,7 +289,7 @@ class RulesEngine:
         """Create a decision object."""
         processing_time = 0
         if start_time:
-            processing_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+            processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
         
         return AuthorizationDecision(
             allowed=allowed,

@@ -3,7 +3,7 @@ Connected Accounts Model
 
 Stores user-linked financial accounts (Stripe Connect, etc.)
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy import Column, String, DateTime, Boolean, Enum, ForeignKey, JSON
 from sqlalchemy.orm import relationship
@@ -64,8 +64,8 @@ class ConnectedAccount(Base):
     account_metadata = Column(JSON, nullable=True)  # Renamed from 'metadata' to avoid SQLAlchemy conflict
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     connected_at = Column(DateTime, nullable=True)  # When fully connected
     disconnected_at = Column(DateTime, nullable=True)
     
@@ -139,7 +139,7 @@ class AgentTransaction(Base):
     transaction_metadata = Column(JSON, nullable=True)  # Renamed from 'metadata'
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     authorized_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     

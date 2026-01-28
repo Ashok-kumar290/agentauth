@@ -7,7 +7,7 @@ import json
 import hmac
 import hashlib
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 from sqlalchemy import select
@@ -195,7 +195,7 @@ class WebhooksService:
         # Build full payload
         full_payload = {
             "event": event_type,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": payload
         }
         payload_json = json.dumps(full_payload)

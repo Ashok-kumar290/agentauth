@@ -5,7 +5,7 @@ Provides secure access to the admin dashboard.
 """
 from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import jwt
 import hashlib
 from typing import Optional
@@ -37,11 +37,11 @@ class AdminVerifyResponse(BaseModel):
 
 def create_admin_token() -> tuple[str, datetime]:
     """Create a JWT token for admin access."""
-    expires = datetime.utcnow() + timedelta(seconds=settings.admin_token_expiry)
+    expires = datetime.now(timezone.utc) + timedelta(seconds=settings.admin_token_expiry)
     payload = {
         "type": "admin",
         "exp": expires,
-        "iat": datetime.utcnow(),
+        "iat": datetime.now(timezone.utc),
     }
     token = jwt.encode(payload, settings.admin_jwt_secret, algorithm="HS256")
     return token, expires

@@ -6,7 +6,7 @@ Tracks Stripe subscription data, plan limits, and usage quotas.
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, Enum as SQLEnum, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import enum
 import uuid
@@ -136,4 +136,4 @@ class Subscription(Base):
     def reset_usage(self):
         """Reset usage counter for new billing period."""
         self.api_calls_used = 0
-        self.current_period_start = datetime.utcnow()
+        self.current_period_start = datetime.now(timezone.utc)

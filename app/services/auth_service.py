@@ -8,7 +8,7 @@ OPTIMIZED for <10ms latency:
 """
 import asyncio
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from collections import deque
 import threading
@@ -56,7 +56,7 @@ class AuthService:
         """Get consent from in-memory cache if not expired."""
         if consent_id in _consent_cache:
             data, cached_at = _consent_cache[consent_id]
-            if (datetime.utcnow() - cached_at).total_seconds() < CACHE_TTL_SECONDS:
+            if (datetime.now(timezone.utc) - cached_at).total_seconds() < CACHE_TTL_SECONDS:
                 return data
             else:
                 del _consent_cache[consent_id]
@@ -64,7 +64,7 @@ class AuthService:
     
     def _cache_consent(self, consent_id: str, data: dict):
         """Store consent in in-memory cache."""
-        _consent_cache[consent_id] = (data, datetime.utcnow())
+        _consent_cache[consent_id] = (data, datetime.now(timezone.utc))
         # Limit cache size (simple eviction)
         if len(_consent_cache) > 10000:
             oldest = min(_consent_cache.keys(), key=lambda k: _consent_cache[k][1])
@@ -87,7 +87,7 @@ class AuthService:
                 expires_at = cached.get("expires_at")
                 if expires_at:
                     from dateutil.parser import parse as parse_date
-                    if parse_date(expires_at) > datetime.utcnow():
+                    if parse_date(expires_at).replace(tzinfo=timezone.utc) > datetime.now(timezone.utc):
                         return cached
             # Cache hit but invalid
             return None
@@ -150,7 +150,7 @@ class AuthService:
             )
         
         # Step 3: All checks passed - generate authorization code
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expires_at = now + timedelta(seconds=settings.auth_code_expiry_seconds)
         authorization_code = generate_authorization_code()
         

@@ -2,7 +2,7 @@
 Consent model - stores user authorization intents
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import String, Text, DateTime, JSON, Boolean
@@ -70,9 +70,10 @@ class Consent(Base):
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True  # Index for ORDER BY created_at DESC queries
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -86,7 +87,7 @@ class Consent(Base):
     @property
     def is_valid(self) -> bool:
         """Check if consent is still valid (not expired, not revoked)."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return (
             self.is_active 
             and self.revoked_at is None 

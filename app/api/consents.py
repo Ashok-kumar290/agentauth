@@ -21,32 +21,49 @@ router = APIRouter(prefix="/v1/consents", tags=["Consents"])
     description="List all active consents (for dashboard monitoring).",
 )
 async def list_consents(
-    limit: int = Query(default=50, le=100),
+    limit: int = Query(default=20, le=100, description="Max consents to return"),
+    offset: int = Query(default=0, ge=0, description="Offset for pagination"),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all consents for dashboard monitoring."""
+    """List all consents for dashboard monitoring with pagination."""
     try:
+        # Efficient query with pagination - uses index on created_at
         result = await db.execute(
-            select(Consent).order_by(Consent.created_at.desc()).limit(limit)
+            select(
+                Consent.consent_id,
+                Consent.user_id,
+                Consent.developer_id,
+                Consent.intent_description,
+                Consent.constraints,
+                Consent.scope,
+                Consent.is_active,
+                Consent.created_at,
+                Consent.expires_at
+            )
+            .order_by(Consent.created_at.desc())
+            .offset(offset)
+            .limit(limit)
         )
-        consents = result.scalars().all()
+        rows = result.all()
         
         return {
             "consents": [
                 {
-                    "consent_id": c.consent_id,
-                    "user_id": c.user_id,
-                    "developer_id": c.developer_id,
-                    "intent_description": c.intent_description,
-                    "constraints": c.constraints,
-                    "scope": c.scope,
-                    "is_active": c.is_active,
-                    "created_at": c.created_at.isoformat() if c.created_at else None,
-                    "expires_at": c.expires_at.isoformat() if c.expires_at else None,
+                    "consent_id": row.consent_id,
+                    "user_id": row.user_id,
+                    "developer_id": row.developer_id,
+                    "intent_description": row.intent_description,
+                    "constraints": row.constraints,
+                    "scope": row.scope,
+                    "is_active": row.is_active,
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                    "expires_at": row.expires_at.isoformat() if row.expires_at else None,
                 }
-                for c in consents
+                for row in rows
             ],
-            "total": len(consents),
+            "total": len(rows),
+            "limit": limit,
+            "offset": offset,
         }
     except Exception as e:
         return {"consents": [], "total": 0, "error": str(e)}

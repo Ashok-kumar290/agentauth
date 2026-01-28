@@ -3,7 +3,7 @@ Consent Service - CRUD operations for user consents
 """
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -48,7 +48,7 @@ class ConsentService:
         2. We capture and store the consent
         3. We generate a delegation token for the agent
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expires_at = now + timedelta(
             seconds=consent_data.options.expires_in_seconds
         )
@@ -99,7 +99,7 @@ class ConsentService:
             "expires_at": str(expires_at),
             "constraints": constraints,
         }
-        _consent_cache[consent_id] = (cache_data, datetime.utcnow())
+                _consent_cache[consent_id] = (cache_data, datetime.now(timezone.utc))
         
         # Generate delegation token
         delegation_token = token_service.create_delegation_token(
@@ -143,7 +143,7 @@ class ConsentService:
         consent_id: str
     ) -> Optional[Consent]:
         """Get an active (not expired, not revoked) consent."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         result = await db.execute(
             select(Consent).where(
                 Consent.consent_id == consent_id,
@@ -164,7 +164,7 @@ class ConsentService:
         if consent is None:
             return False
         
-        consent.revoked_at = datetime.utcnow()
+        consent.revoked_at = datetime.now(timezone.utc)
         consent.is_active = False
         await db.flush()
         return True

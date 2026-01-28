@@ -2,7 +2,7 @@
 Authorization model - stores authorization decisions and codes
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import String, DateTime, JSON, Boolean, ForeignKey, Integer, Float
@@ -71,8 +71,8 @@ class Authorization(Base):
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
         nullable=False
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -91,7 +91,7 @@ class Authorization(Base):
     @property
     def is_valid(self) -> bool:
         """Check if authorization is still valid (not expired, not used)."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return (
             self.decision == "ALLOW"
             and not self.is_used

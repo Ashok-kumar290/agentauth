@@ -1,7 +1,7 @@
 """
 Verify Service - Merchant verification of authorization codes
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import uuid
 
@@ -39,7 +39,7 @@ class VerifyService:
         1. Check in-memory cache (populated by authorize)
         2. Fall back to database lookup
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # Step 1: Check in-memory cache first (fast path)
         cached_auth = _auth_cache.get(request.authorization_code)

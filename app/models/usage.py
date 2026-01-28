@@ -5,7 +5,7 @@ Records individual API calls for billing and analytics.
 """
 from sqlalchemy import Column, String, Integer, DateTime, Index
 from sqlalchemy.sql import func
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.models.database import Base
@@ -88,7 +88,7 @@ class UsageSummary(Base):
     def increment(self, endpoint: str):
         """Increment counters based on endpoint."""
         self.total_api_calls += 1
-        self.last_call_at = datetime.utcnow()
+        self.last_call_at = datetime.now(timezone.utc)
         
         if self.first_call_at is None:
             self.first_call_at = self.last_call_at

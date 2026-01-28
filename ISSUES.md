@@ -50,7 +50,7 @@
 ## 🔄 Known Issues / Remaining Work
 
 ### Code Quality
-- [ ] Fix `datetime.utcnow()` deprecation warnings (use `datetime.now(datetime.UTC)`)
+- [x] Fix `datetime.utcnow()` deprecation warnings (use `datetime.now(timezone.utc)`) ✅ FIXED
 - [ ] Fix Pydantic V2 `ConfigDict` deprecation warning in `app/config.py`
 
 ### Testing

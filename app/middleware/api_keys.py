@@ -5,7 +5,7 @@ Simple API key management for MVP.
 """
 import secrets
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import APIKeyHeader
@@ -37,7 +37,7 @@ def generate_api_key(owner: str = "default") -> dict:
     API_KEY_STORE[key_hash] = {
         "key_id": key_id,
         "owner": owner,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "permissions": ["read", "write"],
         "rate_limit": 1000,  # requests per minute
     }

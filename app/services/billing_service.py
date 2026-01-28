@@ -3,7 +3,7 @@ Billing service for subscription and usage management.
 
 Handles plan limits, usage tracking, and Stripe synchronization.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
@@ -33,7 +33,7 @@ async def get_or_create_subscription(db: AsyncSession, user_id: str) -> Subscrip
             plan=PlanType.FREE,
             status=SubscriptionStatus.ACTIVE,
             api_calls_limit=PLAN_LIMITS[PlanType.FREE]["api_calls_monthly"],
-            current_period_start=datetime.utcnow(),
+            current_period_start=datetime.now(timezone.utc),
         )
         db.add(subscription)
         await db.commit()
@@ -102,7 +102,7 @@ async def record_api_usage(
     subscription.api_calls_used += 1
     
     # Get current billing period
-    billing_period = datetime.utcnow().strftime("%Y-%m")
+    billing_period = datetime.now(timezone.utc).strftime("%Y-%m")
     
     # Record individual usage
     usage_record = UsageRecord(
@@ -134,8 +134,8 @@ async def record_api_usage(
             user_id=user_id,
             billing_period=billing_period,
             total_api_calls=1,
-            first_call_at=datetime.utcnow(),
-            last_call_at=datetime.utcnow(),
+            first_call_at=datetime.now(timezone.utc),
+            last_call_at=datetime.now(timezone.utc),
         )
         if "/consents" in endpoint:
             summary.consents_created = 1
@@ -156,7 +156,7 @@ async def get_usage_stats(db: AsyncSession, user_id: str) -> dict:
     Get usage statistics for a user.
     """
     subscription = await get_or_create_subscription(db, user_id)
-    billing_period = datetime.utcnow().strftime("%Y-%m")
+    billing_period = datetime.now(timezone.utc).strftime("%Y-%m")
     
     result = await db.execute(
         select(UsageSummary).where(
@@ -207,7 +207,7 @@ async def upgrade_subscription(
     subscription.stripe_customer_id = stripe_customer_id
     subscription.stripe_price_id = stripe_price_id
     subscription.api_calls_limit = PLAN_LIMITS[plan]["api_calls_monthly"]
-    subscription.current_period_start = datetime.utcnow()
+    subscription.current_period_start = datetime.now(timezone.utc)
     subscription.current_period_end = period_end
     
     await db.commit()
@@ -229,7 +229,7 @@ async def cancel_subscription(db: AsyncSession, user_id: str) -> Subscription:
             print(f"Stripe cancel error: {e}")
     
     subscription.status = SubscriptionStatus.CANCELED
-    subscription.canceled_at = datetime.utcnow()
+    subscription.canceled_at = datetime.now(timezone.utc)
     
     await db.commit()
     await db.refresh(subscription)
@@ -283,7 +283,7 @@ async def sync_stripe_webhook(db: AsyncSession, event: dict) -> None:
         
         if subscription:
             subscription.status = SubscriptionStatus.CANCELED
-            subscription.canceled_at = datetime.utcnow()
+            subscription.canceled_at = datetime.now(timezone.utc)
             await db.commit()
     
     elif event_type == "invoice.payment_succeeded":

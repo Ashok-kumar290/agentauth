@@ -10,7 +10,7 @@ AgentAuth Velocity Checks Engine
 """
 
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from dataclasses import dataclass
 from pydantic import BaseModel
@@ -206,7 +206,7 @@ class VelocityRules:
         Transactions during unusual hours (midnight-4AM) flagged.
         """
         if transaction_time is None:
-            transaction_time = datetime.utcnow()
+            transaction_time = datetime.now(timezone.utc)
         
         hour = transaction_time.hour
         
@@ -428,7 +428,7 @@ class VelocityService:
             last_time = await cache.get(key)
             if last_time:
                 last_dt = datetime.fromisoformat(last_time)
-                return datetime.utcnow() - last_dt
+                return datetime.now(timezone.utc) - last_dt
             return None
         except Exception:
             return None
@@ -440,7 +440,7 @@ class VelocityService:
             from app.services.cache_service import get_cache_service
             cache = get_cache_service()
             key = f"velocity:user:{user_id}:last_txn_time"
-            await cache.set(key, datetime.utcnow().isoformat(), ttl=86400)
+            await cache.set(key, datetime.now(timezone.utc).isoformat(), ttl=86400)
         except Exception:
             pass
     

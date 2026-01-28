@@ -6,7 +6,7 @@ Provides aggregate stats, transaction logs, and real-time metrics.
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import get_settings
@@ -80,7 +80,7 @@ async def get_dashboard(
         # Get daily counts for chart (last 7 days)
         daily_requests = []
         for i in range(6, -1, -1):
-            day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=i)
+            day = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=i)
             next_day = day + timedelta(days=1)
             
             result = await db.execute(
@@ -136,7 +136,7 @@ async def get_dashboard_stats(
         active_consents = active_result.scalar() or 0
         
         # Get today's consents
-        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         today_result = await db.execute(
             select(func.count(Consent.id)).where(Consent.created_at >= today)
         )
@@ -166,7 +166,7 @@ async def get_dashboard_stats(
             "consents_today": today_consents,
             "avg_max_amount": round(avg_max_amount, 2),
             "api_status": "healthy",
-            "last_updated": datetime.utcnow().isoformat(),
+            "last_updated": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
         return {
@@ -176,7 +176,7 @@ async def get_dashboard_stats(
             "avg_max_amount": 0,
             "api_status": "error",
             "error": str(e),
-            "last_updated": datetime.utcnow().isoformat(),
+            "last_updated": datetime.now(timezone.utc).isoformat(),
         }
 
 
@@ -251,7 +251,7 @@ async def get_analytics(
         analytics = []
         
         for i in range(days, -1, -1):
-            day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=i)
+            day = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=i)
             next_day = day + timedelta(days=1)
             
             # Count consents for this day
@@ -286,6 +286,6 @@ async def dashboard_health():
     """Quick health check for the dashboard API."""
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.1",  # Incremented to force redeploy
     }
