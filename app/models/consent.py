@@ -102,3 +102,10 @@ class Consent(Base):
     def currency(self) -> Optional[str]:
         """Get currency from constraints."""
         return self.constraints.get("currency")
+
+    @property
+    def agent_id(self) -> Optional[str]:
+        """Get agent_id from scope for backward compatibility."""
+        if self.scope and isinstance(self.scope, dict):
+            return self.scope.get("agent_id") or self.scope.get("agent_name")
+        return None
