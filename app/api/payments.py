@@ -4,7 +4,7 @@ Payment API routes for Stripe integration.
 Handles payment intents, subscriptions, and webhooks.
 """
 import logging
-from fastapi import APIRouter, HTTPException, Request, Header
+from fastapi import APIRouter, HTTPException, Request, Header, Depends
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,9 @@ from app.schemas.payment import (
     PricingResponse,
 )
 from app.services import stripe_service
+from app.services.billing_service import sync_stripe_webhook
+from app.models.database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 
 settings = get_settings()
 
@@ -243,60 +246,79 @@ async def cancel_subscription(subscription_id: str):
 async def stripe_webhook(
     request: Request,
     stripe_signature: Optional[str] = Header(None, alias="Stripe-Signature"),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Handle Stripe webhook events.
-    
+
     Processes payment and subscription events from Stripe.
+    Syncs subscription state with the billing service.
     """
     if not stripe_signature:
         raise HTTPException(status_code=400, detail="Missing Stripe signature")
-    
+
     payload = await request.body()
-    
+
     try:
         event = stripe_service.verify_webhook_signature(payload, stripe_signature)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid signature")
-    
-    # Handle different event types
+
     event_type = event.get("type", "")
-    
+    event_data = event.get("data", {}).get("object", {})
+
     if event_type == "payment_intent.succeeded":
-        # Payment completed successfully
-        payment_intent = event["data"]["object"]
-        logger.info("Payment succeeded: %s", payment_intent['id'])
-        # TODO: Update order status, send confirmation email, etc.
-        
+        payment_intent = event_data
+        logger.info("Payment succeeded: %s, amount: %s %s",
+                     payment_intent.get("id"),
+                     payment_intent.get("amount"),
+                     payment_intent.get("currency", "usd"))
+        # Check if this is an agent purchase
+        metadata = payment_intent.get("metadata", {})
+        if metadata.get("source") == "agentauth_ai_agent":
+            logger.info("Agent purchase confirmed, auth_code: %s",
+                         metadata.get("authorization_code"))
+
     elif event_type == "payment_intent.payment_failed":
-        # Payment failed
-        payment_intent = event["data"]["object"]
-        logger.error("Payment failed: %s", payment_intent['id'])
-        # TODO: Notify user, update order status
-        
+        payment_intent = event_data
+        error = payment_intent.get("last_payment_error", {})
+        logger.error("Payment failed: %s, reason: %s",
+                      payment_intent.get("id"),
+                      error.get("message", "unknown"))
+
     elif event_type == "customer.subscription.created":
-        subscription = event["data"]["object"]
-        logger.info("Subscription created: %s", subscription['id'])
-        # TODO: Grant access to user
-        
+        subscription = event_data
+        logger.info("Subscription created: %s, status: %s",
+                     subscription.get("id"), subscription.get("status"))
+        await sync_stripe_webhook(db, event)
+
     elif event_type == "customer.subscription.updated":
-        subscription = event["data"]["object"]
-        logger.info("Subscription updated: %s", subscription['id'])
-        # TODO: Update user access level
-        
+        subscription = event_data
+        logger.info("Subscription updated: %s, status: %s",
+                     subscription.get("id"), subscription.get("status"))
+        await sync_stripe_webhook(db, event)
+
     elif event_type == "customer.subscription.deleted":
-        subscription = event["data"]["object"]
-        logger.warning("Subscription canceled: %s", subscription['id'])
-        # TODO: Revoke access
-        
+        subscription = event_data
+        logger.warning("Subscription canceled: %s", subscription.get("id"))
+        await sync_stripe_webhook(db, event)
+
     elif event_type == "invoice.payment_succeeded":
-        invoice = event["data"]["object"]
-        logger.info("Invoice paid: %s", invoice['id'])
-        # TODO: Send receipt
-        
+        invoice = event_data
+        logger.info("Invoice paid: %s, amount: %s, subscription: %s",
+                     invoice.get("id"),
+                     invoice.get("amount_paid"),
+                     invoice.get("subscription"))
+        await sync_stripe_webhook(db, event)
+
     elif event_type == "invoice.payment_failed":
-        invoice = event["data"]["object"]
-        logger.error("Invoice payment failed: %s", invoice['id'])
-        # TODO: Notify user, retry payment
-    
+        invoice = event_data
+        logger.error("Invoice payment failed: %s, subscription: %s, next_attempt: %s",
+                      invoice.get("id"),
+                      invoice.get("subscription"),
+                      invoice.get("next_payment_attempt"))
+
+    else:
+        logger.info("Unhandled webhook event type: %s", event_type)
+
     return {"received": True}

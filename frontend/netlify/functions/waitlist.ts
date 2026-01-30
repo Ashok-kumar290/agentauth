@@ -137,8 +137,11 @@ https://agentauth.in
 };
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+  const allowedOrigins = ["https://agentauth.in", "https://www.agentauth.in", "http://localhost:5173"];
+  const origin = event.headers["origin"] || "";
+  const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
   const headers = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": corsOrigin,
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json",

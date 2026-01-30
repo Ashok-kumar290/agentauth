@@ -223,7 +223,11 @@ const ApiKeyCard = ({
         </div>
         <div className="flex items-center gap-3">
             <code className="text-sm text-gray-500 bg-white/5 px-3 py-2 rounded">{keyPreview}</code>
-            <button className="w-9 h-9 rounded-lg bg-white/5 border border-[#333] text-gray-500 hover:bg-white/10 hover:text-white flex items-center justify-center">
+            <button
+                onClick={() => navigator.clipboard?.writeText(keyPreview)}
+                className="w-9 h-9 rounded-lg bg-white/5 border border-[#333] text-gray-500 hover:bg-white/10 hover:text-white flex items-center justify-center"
+                title="Copy key"
+            >
                 <Copy className="w-4 h-4" />
             </button>
         </div>
@@ -293,6 +297,27 @@ const QuickAction = ({
     </button>
 );
 
+// Color maps for Tailwind (static classes required - dynamic interpolation gets purged)
+const colorBgMap: Record<string, string> = {
+    emerald: "bg-emerald-500/10",
+    red: "bg-red-500/10",
+    yellow: "bg-yellow-500/10",
+    purple: "bg-purple-500/10",
+    cyan: "bg-cyan-500/10",
+    orange: "bg-orange-500/10",
+    blue: "bg-blue-500/10",
+};
+
+const colorTextMap: Record<string, string> = {
+    emerald: "text-emerald-500",
+    red: "text-red-500",
+    yellow: "text-yellow-500",
+    purple: "text-purple-500",
+    cyan: "text-cyan-500",
+    orange: "text-orange-500",
+    blue: "text-blue-500",
+};
+
 // Page title mapping
 const pageTitles: Record<NavSection, string> = {
     dashboard: "Dashboard",
@@ -315,6 +340,142 @@ export function Dashboard() {
     const [isLoading, setIsLoading] = useState(true);
     const [period, setPeriod] = useState("7d");
     const [chartData, setChartData] = useState([65, 80, 45, 90, 70, 55, 40]);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+    const [newKeyName, setNewKeyName] = useState("");
+    const [newKeyType, setNewKeyType] = useState<"live" | "test">("live");
+    const [webhookUrl, setWebhookUrl] = useState("");
+    const [inviteEmail, setInviteEmail] = useState("");
+    const [inviteRole, setInviteRole] = useState("Admin");
+    const [notifications, setNotifications] = useState<Record<number, boolean>>({ 0: true, 1: true, 2: false, 3: true });
+    const [txPage, setTxPage] = useState(1);
+    const [logSearch, setLogSearch] = useState("");
+    const [txSearch, setTxSearch] = useState("");
+    const [txStatusFilter, setTxStatusFilter] = useState("all");
+    const [txTimeFilter, setTxTimeFilter] = useState("7d");
+    const [logEventFilter, setLogEventFilter] = useState("all");
+    const [logTimeFilter, setLogTimeFilter] = useState("24h");
+    const [visibleLogs, setVisibleLogs] = useState(10);
+    const [agentSearch, setAgentSearch] = useState("");
+
+    // Show toast notification
+    const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    // Clipboard helper
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text).then(
+            () => showToast("Copied to clipboard!", "success"),
+            () => showToast("Failed to copy", "error")
+        );
+    };
+
+    // Handle consent approve/deny
+    const handleConsentAction = (agent: string, action: "approve" | "deny") => {
+        showToast(`${action === "approve" ? "Approved" : "Denied"} consent for ${agent}`, action === "approve" ? "success" : "info");
+    };
+
+    // Handle consent revoke
+    const handleRevokeConsent = (agent: string) => {
+        showToast(`Revoked consent for ${agent}`, "info");
+    };
+
+    // Handle create API key
+    const handleCreateKey = () => {
+        if (!newKeyName.trim()) {
+            showToast("Please enter a key name", "error");
+            return;
+        }
+        showToast(`API key "${newKeyName}" created successfully!`, "success");
+        setNewKeyName("");
+    };
+
+    // Handle delete API key
+    const handleDeleteKey = (name: string) => {
+        if (confirm(`Are you sure you want to delete the key "${name}"? This cannot be undone.`)) {
+            showToast(`API key "${name}" deleted`, "info");
+        }
+    };
+
+    // Handle add webhook
+    const handleAddWebhook = () => {
+        if (!webhookUrl.trim()) {
+            showToast("Please enter a webhook URL", "error");
+            return;
+        }
+        try {
+            new URL(webhookUrl);
+            showToast(`Webhook endpoint added: ${webhookUrl}`, "success");
+            setWebhookUrl("");
+        } catch {
+            showToast("Please enter a valid URL", "error");
+        }
+    };
+
+    // Handle test webhook
+    const handleTestWebhook = (url: string) => {
+        showToast(`Test event sent to ${url}`, "info");
+    };
+
+    // Handle delete webhook
+    const handleDeleteWebhook = (url: string) => {
+        if (confirm(`Delete webhook endpoint?\n${url}`)) {
+            showToast("Webhook deleted", "info");
+        }
+    };
+
+    // Handle invite team member
+    const handleInvite = () => {
+        if (!inviteEmail.trim() || !inviteEmail.includes("@")) {
+            showToast("Please enter a valid email address", "error");
+            return;
+        }
+        showToast(`Invitation sent to ${inviteEmail} as ${inviteRole}`, "success");
+        setInviteEmail("");
+    };
+
+    // Handle notification toggle
+    const handleToggleNotification = (index: number) => {
+        setNotifications(prev => ({ ...prev, [index]: !prev[index] }));
+        showToast("Notification setting updated", "success");
+    };
+
+    // Handle export
+    const handleExport = (type: string) => {
+        showToast(`Exporting ${type}... Download will start shortly.`, "info");
+    };
+
+    // Handle upgrade plan
+    const handleUpgradePlan = () => {
+        const apiBase = window.location.hostname === "localhost" ? "http://localhost:8000" : window.location.origin;
+        window.open(`${apiBase}/.netlify/functions/checkout?plan=enterprise`, "_blank");
+    };
+
+    // Handle update payment
+    const handleUpdatePayment = () => {
+        showToast("Redirecting to payment portal...", "info");
+        const apiBase = window.location.hostname === "localhost" ? "http://localhost:8000" : window.location.origin;
+        window.open(`${apiBase}/.netlify/functions/checkout?update=true`, "_blank");
+    };
+
+    // Handle delete org
+    const handleDeleteOrg = () => {
+        const confirmText = prompt('Type "DELETE" to confirm organization deletion:');
+        if (confirmText === "DELETE") {
+            showToast("Organization deletion requested. You will receive a confirmation email.", "info");
+        } else if (confirmText !== null) {
+            showToast("Deletion cancelled - text did not match", "error");
+        }
+    };
+
+    // Handle edit settings
+    const handleEditSetting = (field: string) => {
+        const newValue = prompt(`Enter new ${field}:`);
+        if (newValue) {
+            showToast(`${field} updated to "${newValue}"`, "success");
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -415,7 +576,28 @@ export function Dashboard() {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto">
+            <main className="flex-1 overflow-y-auto relative">
+                {/* Toast Notification */}
+                <AnimatePresence>
+                    {toast && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg border text-sm flex items-center gap-2 ${
+                                toast.type === "success" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
+                                toast.type === "error" ? "bg-red-500/10 border-red-500/30 text-red-400" :
+                                "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
+                            }`}
+                        >
+                            {toast.type === "success" ? <Check className="w-4 h-4" /> :
+                             toast.type === "error" ? <X className="w-4 h-4" /> :
+                             <Bell className="w-4 h-4" />}
+                            {toast.message}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {/* Header */}
                 <header className="flex justify-between items-center px-8 py-5 border-b border-[#222]">
                     <h1 className="text-xl font-semibold">{pageTitles[activeNav]}</h1>
@@ -435,7 +617,10 @@ export function Dashboard() {
                             <BookOpen className="w-4 h-4" />
                             Docs
                         </a>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium transition-colors">
+                        <button
+                            onClick={() => setActiveNav("apikeys")}
+                            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium transition-colors"
+                        >
                             <Plus className="w-4 h-4" />
                             New API Key
                         </button>
@@ -780,22 +965,35 @@ export function Dashboard() {
                                         <input
                                             type="text"
                                             placeholder="Search by transaction ID, merchant, or amount..."
+                                            value={txSearch}
+                                            onChange={(e) => setTxSearch(e.target.value)}
                                             className="w-full pl-10 pr-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
                                     </div>
-                                    <select className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none">
-                                        <option>All Status</option>
-                                        <option>Authorized</option>
-                                        <option>Denied</option>
-                                        <option>Pending</option>
+                                    <select
+                                        value={txStatusFilter}
+                                        onChange={(e) => setTxStatusFilter(e.target.value)}
+                                        className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none"
+                                    >
+                                        <option value="all">All Status</option>
+                                        <option value="authorized">Authorized</option>
+                                        <option value="denied">Denied</option>
+                                        <option value="pending">Pending</option>
                                     </select>
-                                    <select className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none">
-                                        <option>Last 7 days</option>
-                                        <option>Last 30 days</option>
-                                        <option>Last 90 days</option>
-                                        <option>All time</option>
+                                    <select
+                                        value={txTimeFilter}
+                                        onChange={(e) => setTxTimeFilter(e.target.value)}
+                                        className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none"
+                                    >
+                                        <option value="7d">Last 7 days</option>
+                                        <option value="30d">Last 30 days</option>
+                                        <option value="90d">Last 90 days</option>
+                                        <option value="all">All time</option>
                                     </select>
-                                    <button className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">
+                                    <button
+                                        onClick={() => handleExport("transactions")}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10"
+                                    >
                                         <Download className="w-4 h-4" />
                                         Export
                                     </button>
@@ -847,7 +1045,10 @@ export function Dashboard() {
                                                     </td>
                                                     <td className="py-3.5 px-4 text-gray-500 text-sm">{tx.time}</td>
                                                     <td className="py-3.5 px-4">
-                                                        <button className="p-2 hover:bg-white/5 rounded-lg">
+                                                        <button
+                                                            onClick={() => showToast(`Transaction ${tx.id} details`, "info")}
+                                                            className="p-2 hover:bg-white/5 rounded-lg"
+                                                        >
                                                             <MoreVertical className="w-4 h-4 text-gray-500" />
                                                         </button>
                                                     </td>
@@ -859,17 +1060,36 @@ export function Dashboard() {
 
                                 {/* Pagination */}
                                 <div className="flex items-center justify-between mt-4">
-                                    <span className="text-sm text-gray-500">Showing 1-8 of 12,847 transactions</span>
+                                    <span className="text-sm text-gray-500">Showing {(txPage - 1) * 8 + 1}-{Math.min(txPage * 8, 12847)} of 12,847 transactions</span>
                                     <div className="flex gap-2">
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 disabled:opacity-50" disabled>
+                                        <button
+                                            onClick={() => setTxPage(p => Math.max(1, p - 1))}
+                                            disabled={txPage === 1}
+                                            className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 disabled:opacity-50"
+                                        >
                                             Previous
                                         </button>
-                                        <button className="px-3 py-1.5 bg-white/10 border border-[#444] rounded-lg text-sm">1</button>
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">2</button>
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">3</button>
+                                        {[1, 2, 3].map(p => (
+                                            <button
+                                                key={p}
+                                                onClick={() => setTxPage(p)}
+                                                className={`px-3 py-1.5 border rounded-lg text-sm ${txPage === p ? "bg-white/10 border-[#444]" : "bg-white/5 border-[#333] hover:bg-white/10"}`}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
                                         <span className="px-2 py-1.5 text-gray-500">...</span>
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">1606</button>
-                                        <button className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">
+                                        <button
+                                            onClick={() => setTxPage(1606)}
+                                            className={`px-3 py-1.5 border rounded-lg text-sm ${txPage === 1606 ? "bg-white/10 border-[#444]" : "bg-white/5 border-[#333] hover:bg-white/10"}`}
+                                        >
+                                            1606
+                                        </button>
+                                        <button
+                                            onClick={() => setTxPage(p => Math.min(1606, p + 1))}
+                                            disabled={txPage === 1606}
+                                            className="px-3 py-1.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10 disabled:opacity-50"
+                                        >
                                             Next
                                         </button>
                                     </div>
@@ -935,10 +1155,16 @@ export function Dashboard() {
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm">
+                                                    <button
+                                                        onClick={() => handleConsentAction(consent.agent, "deny")}
+                                                        className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm"
+                                                    >
                                                         Deny
                                                     </button>
-                                                    <button className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm">
+                                                    <button
+                                                        onClick={() => handleConsentAction(consent.agent, "approve")}
+                                                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm"
+                                                    >
                                                         Approve
                                                     </button>
                                                 </div>
@@ -984,7 +1210,10 @@ export function Dashboard() {
                                                             </span>
                                                         </td>
                                                         <td className="py-3.5 px-4">
-                                                            <button className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs">
+                                                            <button
+                                                                onClick={() => handleRevokeConsent(c.agent)}
+                                                                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs"
+                                                            >
                                                                 Revoke
                                                             </button>
                                                         </td>
@@ -1014,11 +1243,16 @@ export function Dashboard() {
                                             <input
                                                 type="text"
                                                 placeholder="Search agents..."
+                                                value={agentSearch}
+                                                onChange={(e) => setAgentSearch(e.target.value)}
                                                 className="pl-10 pr-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none focus:border-[#444] w-64"
                                             />
                                         </div>
                                     </div>
-                                    <button className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium">
+                                    <button
+                                        onClick={() => showToast("Agent registration form coming soon!", "info")}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium"
+                                    >
                                         <Plus className="w-4 h-4" />
                                         Register Agent
                                     </button>
@@ -1051,7 +1285,10 @@ export function Dashboard() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button className="p-2 hover:bg-white/5 rounded-lg">
+                                                <button
+                                                    onClick={() => showToast(`Agent "${agent.name}" options: Configure, Deactivate, View Logs`, "info")}
+                                                    className="p-2 hover:bg-white/5 rounded-lg"
+                                                >
                                                     <MoreVertical className="w-4 h-4 text-gray-500" />
                                                 </button>
                                             </div>
@@ -1091,22 +1328,35 @@ export function Dashboard() {
                                         <input
                                             type="text"
                                             placeholder="Search logs..."
+                                            value={logSearch}
+                                            onChange={(e) => setLogSearch(e.target.value)}
                                             className="w-full pl-10 pr-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
                                     </div>
-                                    <select className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none">
-                                        <option>All Events</option>
-                                        <option>Authorization</option>
-                                        <option>Configuration</option>
-                                        <option>Security</option>
-                                        <option>API</option>
+                                    <select
+                                        value={logEventFilter}
+                                        onChange={(e) => setLogEventFilter(e.target.value)}
+                                        className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none"
+                                    >
+                                        <option value="all">All Events</option>
+                                        <option value="authorization">Authorization</option>
+                                        <option value="config">Configuration</option>
+                                        <option value="security">Security</option>
+                                        <option value="api">API</option>
                                     </select>
-                                    <select className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none">
-                                        <option>Last 24 hours</option>
-                                        <option>Last 7 days</option>
-                                        <option>Last 30 days</option>
+                                    <select
+                                        value={logTimeFilter}
+                                        onChange={(e) => setLogTimeFilter(e.target.value)}
+                                        className="px-4 py-2.5 bg-[#111] border border-[#222] rounded-lg text-white text-sm focus:outline-none"
+                                    >
+                                        <option value="24h">Last 24 hours</option>
+                                        <option value="7d">Last 7 days</option>
+                                        <option value="30d">Last 30 days</option>
                                     </select>
-                                    <button className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">
+                                    <button
+                                        onClick={() => handleExport("audit logs")}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10"
+                                    >
                                         <Download className="w-4 h-4" />
                                         Export
                                     </button>
@@ -1127,13 +1377,13 @@ export function Dashboard() {
                                         { type: "security", icon: UserPlus, color: "blue", title: "Team member added", details: "sarah@company.com invited as Admin", time: "2 days ago" },
                                     ].map((log, i) => (
                                         <div key={i} className="flex items-start gap-4 p-4 bg-[#111] border border-[#222] rounded-xl hover:bg-white/[0.02]">
-                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-${log.color}-500/10`}>
-                                                <log.icon className={`w-5 h-5 text-${log.color}-500`} />
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colorBgMap[log.color] || "bg-gray-500/10"}`}>
+                                                <log.icon className={`w-5 h-5 ${colorTextMap[log.color] || "text-gray-500"}`} />
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-white font-medium text-sm">{log.title}</span>
-                                                    <span className={`px-2 py-0.5 rounded text-xs bg-${log.color}-500/10 text-${log.color}-500`}>
+                                                    <span className={`px-2 py-0.5 rounded text-xs ${colorBgMap[log.color] || "bg-gray-500/10"} ${colorTextMap[log.color] || "text-gray-500"}`}>
                                                         {log.type}
                                                     </span>
                                                 </div>
@@ -1146,7 +1396,10 @@ export function Dashboard() {
 
                                 {/* Load More */}
                                 <div className="mt-6 text-center">
-                                    <button className="px-6 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10">
+                                    <button
+                                        onClick={() => setVisibleLogs(prev => prev + 10)}
+                                        className="px-6 py-2.5 bg-white/5 border border-[#333] rounded-lg text-sm hover:bg-white/10"
+                                    >
                                         Load More
                                     </button>
                                 </div>
@@ -1178,13 +1431,22 @@ export function Dashboard() {
                                         <input
                                             type="text"
                                             placeholder="Key name (e.g., Production, Staging)"
+                                            value={newKeyName}
+                                            onChange={(e) => setNewKeyName(e.target.value)}
                                             className="flex-1 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
-                                        <select className="px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none">
-                                            <option>Live Key</option>
-                                            <option>Test Key</option>
+                                        <select
+                                            value={newKeyType}
+                                            onChange={(e) => setNewKeyType(e.target.value as "live" | "test")}
+                                            className="px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none"
+                                        >
+                                            <option value="live">Live Key</option>
+                                            <option value="test">Test Key</option>
                                         </select>
-                                        <button className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium">
+                                        <button
+                                            onClick={handleCreateKey}
+                                            className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium"
+                                        >
                                             <Plus className="w-4 h-4" />
                                             Create Key
                                         </button>
@@ -1222,13 +1484,25 @@ export function Dashboard() {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <button className="p-2.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg">
+                                                    <button
+                                                        onClick={() => copyToClipboard(apiKey.key)}
+                                                        className="p-2.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg"
+                                                        title="Copy key"
+                                                    >
                                                         <Copy className="w-4 h-4 text-gray-400" />
                                                     </button>
-                                                    <button className="p-2.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg">
+                                                    <button
+                                                        onClick={() => showToast(`Full key: ${apiKey.key}`, "info")}
+                                                        className="p-2.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg"
+                                                        title="Reveal key"
+                                                    >
                                                         <Eye className="w-4 h-4 text-gray-400" />
                                                     </button>
-                                                    <button className="p-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg">
+                                                    <button
+                                                        onClick={() => handleDeleteKey(apiKey.name)}
+                                                        className="p-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg"
+                                                        title="Delete key"
+                                                    >
                                                         <Trash2 className="w-4 h-4 text-red-500" />
                                                     </button>
                                                 </div>
@@ -1255,9 +1529,14 @@ export function Dashboard() {
                                         <input
                                             type="text"
                                             placeholder="https://your-server.com/webhooks/agentauth"
+                                            value={webhookUrl}
+                                            onChange={(e) => setWebhookUrl(e.target.value)}
                                             className="flex-1 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
-                                        <button className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium">
+                                        <button
+                                            onClick={handleAddWebhook}
+                                            className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium"
+                                        >
                                             <Plus className="w-4 h-4" />
                                             Add Endpoint
                                         </button>
@@ -1289,14 +1568,23 @@ export function Dashboard() {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
+                                                    <button
+                                                        onClick={() => handleTestWebhook(webhook.url)}
+                                                        className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs"
+                                                    >
                                                         <Send className="w-3.5 h-3.5 inline mr-1" />
                                                         Test
                                                     </button>
-                                                    <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
+                                                    <button
+                                                        onClick={() => showToast(`Editing webhook: ${webhook.url}`, "info")}
+                                                        className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs"
+                                                    >
                                                         Edit
                                                     </button>
-                                                    <button className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-xs">
+                                                    <button
+                                                        onClick={() => handleDeleteWebhook(webhook.url)}
+                                                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-xs"
+                                                    >
                                                         Delete
                                                     </button>
                                                 </div>
@@ -1349,14 +1637,23 @@ export function Dashboard() {
                                         <input
                                             type="email"
                                             placeholder="colleague@company.com"
+                                            value={inviteEmail}
+                                            onChange={(e) => setInviteEmail(e.target.value)}
                                             className="flex-1 px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none focus:border-[#444]"
                                         />
-                                        <select className="px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none">
+                                        <select
+                                            value={inviteRole}
+                                            onChange={(e) => setInviteRole(e.target.value)}
+                                            className="px-4 py-2.5 bg-white/5 border border-[#333] rounded-lg text-white text-sm focus:outline-none"
+                                        >
                                             <option>Admin</option>
                                             <option>Developer</option>
                                             <option>Viewer</option>
                                         </select>
-                                        <button className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium">
+                                        <button
+                                            onClick={handleInvite}
+                                            className="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg text-sm font-medium"
+                                        >
                                             <UserPlus className="w-4 h-4" />
                                             Send Invite
                                         </button>
@@ -1416,7 +1713,10 @@ export function Dashboard() {
                                                     <td className="py-4 px-4 text-gray-500 text-sm">{member.lastActive}</td>
                                                     <td className="py-4 px-4">
                                                         {!member.isOwner && (
-                                                            <button className="p-2 hover:bg-white/5 rounded-lg">
+                                                            <button
+                                                                onClick={() => showToast(`Options for ${member.name}: Change Role, Remove`, "info")}
+                                                                className="p-2 hover:bg-white/5 rounded-lg"
+                                                            >
                                                                 <MoreVertical className="w-4 h-4 text-gray-500" />
                                                             </button>
                                                         )}
@@ -1453,7 +1753,10 @@ export function Dashboard() {
                                         <div className="text-right">
                                             <div className="text-3xl font-bold text-white">$199</div>
                                             <div className="text-gray-500 text-sm">/month</div>
-                                            <button className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm">
+                                            <button
+                                                onClick={handleUpgradePlan}
+                                                className="mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+                                            >
                                                 Upgrade Plan
                                             </button>
                                         </div>
@@ -1504,7 +1807,10 @@ export function Dashboard() {
                                                 <p className="text-gray-500 text-xs">Expires 12/2028</p>
                                             </div>
                                         </div>
-                                        <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-sm">
+                                        <button
+                                            onClick={handleUpdatePayment}
+                                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-sm"
+                                        >
                                             Update
                                         </button>
                                     </div>
@@ -1547,7 +1853,10 @@ export function Dashboard() {
                                                             </span>
                                                         </td>
                                                         <td className="py-3.5 px-4">
-                                                            <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
+                                                            <button
+                                                                onClick={() => handleExport(`invoice ${invoice.id}`)}
+                                                                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs"
+                                                            >
                                                                 <Download className="w-3.5 h-3.5 inline mr-1" />
                                                                 PDF
                                                             </button>
@@ -1581,7 +1890,10 @@ export function Dashboard() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <span className="text-gray-400 text-sm">Acme Corporation</span>
-                                                <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
+                                                <button
+                                                    onClick={() => handleEditSetting("Organization Name")}
+                                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs"
+                                                >
                                                     Edit
                                                 </button>
                                             </div>
@@ -1593,7 +1905,10 @@ export function Dashboard() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <code className="text-cyan-400 text-sm">acme.agentauth.in</code>
-                                                <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs">
+                                                <button
+                                                    onClick={() => handleEditSetting("Organization URL")}
+                                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-[#333] rounded-lg text-xs"
+                                                >
                                                     Edit
                                                 </button>
                                             </div>
@@ -1656,18 +1971,21 @@ export function Dashboard() {
                                     <h3 className="text-white font-medium mb-4">Notifications</h3>
                                     <div className="bg-[#111] border border-[#222] rounded-xl divide-y divide-[#222]">
                                         {[
-                                            { title: "Transaction Alerts", desc: "Get notified for denied transactions", enabled: true },
-                                            { title: "Consent Requests", desc: "Notify when agents request new permissions", enabled: true },
-                                            { title: "Weekly Reports", desc: "Receive weekly analytics summary", enabled: false },
-                                            { title: "Security Alerts", desc: "Important security notifications", enabled: true },
+                                            { title: "Transaction Alerts", desc: "Get notified for denied transactions" },
+                                            { title: "Consent Requests", desc: "Notify when agents request new permissions" },
+                                            { title: "Weekly Reports", desc: "Receive weekly analytics summary" },
+                                            { title: "Security Alerts", desc: "Important security notifications" },
                                         ].map((setting, i) => (
                                             <div key={i} className="p-4 flex items-center justify-between">
                                                 <div>
                                                     <p className="text-white text-sm">{setting.title}</p>
                                                     <p className="text-gray-500 text-xs mt-0.5">{setting.desc}</p>
                                                 </div>
-                                                <button className={`w-11 h-6 rounded-full transition-colors ${setting.enabled ? "bg-emerald-500" : "bg-[#333]"}`}>
-                                                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${setting.enabled ? "translate-x-5" : "translate-x-0.5"}`} />
+                                                <button
+                                                    onClick={() => handleToggleNotification(i)}
+                                                    className={`w-11 h-6 rounded-full transition-colors ${notifications[i] ? "bg-emerald-500" : "bg-[#333]"}`}
+                                                >
+                                                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${notifications[i] ? "translate-x-5" : "translate-x-0.5"}`} />
                                                 </button>
                                             </div>
                                         ))}
@@ -1683,7 +2001,10 @@ export function Dashboard() {
                                                 <p className="text-white text-sm">Delete Organization</p>
                                                 <p className="text-gray-500 text-xs mt-0.5">Permanently delete your organization and all data</p>
                                             </div>
-                                            <button className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm">
+                                            <button
+                                                onClick={handleDeleteOrg}
+                                                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm"
+                                            >
                                                 Delete Organization
                                             </button>
                                         </div>

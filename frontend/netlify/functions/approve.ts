@@ -18,10 +18,12 @@ interface ApproveRequest {
 }
 
 const generateInviteCode = (): string => {
+    const crypto = require("crypto");
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = 'AA-';
+    const randomBytes = crypto.randomBytes(8);
     for (let i = 0; i < 8; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+        code += chars.charAt(randomBytes[i] % chars.length);
     }
     return code;
 };
@@ -141,8 +143,11 @@ AgentAuth
 };
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+    const allowedOrigins = ["https://agentauth.in", "https://www.agentauth.in", "http://localhost:5173"];
+    const origin = event.headers["origin"] || "";
+    const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
     const headers = {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": corsOrigin,
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Content-Type": "application/json",

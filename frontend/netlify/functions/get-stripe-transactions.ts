@@ -26,8 +26,11 @@ interface DashboardStats {
 
 const handler: Handler = async (event) => {
     // CORS headers
+    const allowedOrigins = ["https://agentauth.in", "https://www.agentauth.in", "http://localhost:5173"];
+    const origin = event.headers["origin"] || "";
+    const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
     const headers = {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": corsOrigin,
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Content-Type": "application/json",
