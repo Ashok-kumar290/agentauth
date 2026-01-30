@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://localhost:5432/agentauth"
     
     # Security
-    secret_key: str = "dev-secret-key-change-in-production"
+    secret_key: str = ""  # REQUIRED - set via environment variable
     
     # Token settings
     token_expiry_seconds: int = 3600  # 1 hour
@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     stripe_price_enterprise: str = ""
     
     # Admin panel settings
-    admin_password: str = "agentauth2026"  # Change in production!
-    admin_jwt_secret: str = "admin-secret-change-in-production"
+    admin_password: str = ""  # REQUIRED - set via environment variable
+    admin_jwt_secret: str = ""  # REQUIRED - set via environment variable
     admin_token_expiry: int = 3600  # 1 hour
     
     # Redis settings

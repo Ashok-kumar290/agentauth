@@ -3,8 +3,11 @@ Payment API routes for Stripe integration.
 
 Handles payment intents, subscriptions, and webhooks.
 """
+import logging
 from fastapi import APIRouter, HTTPException, Request, Header
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from app.config import get_settings
 from app.schemas.payment import (
@@ -262,38 +265,38 @@ async def stripe_webhook(
     if event_type == "payment_intent.succeeded":
         # Payment completed successfully
         payment_intent = event["data"]["object"]
-        print(f"Payment succeeded: {payment_intent['id']}")
+        logger.info("Payment succeeded: %s", payment_intent['id'])
         # TODO: Update order status, send confirmation email, etc.
         
     elif event_type == "payment_intent.payment_failed":
         # Payment failed
         payment_intent = event["data"]["object"]
-        print(f"Payment failed: {payment_intent['id']}")
+        logger.error("Payment failed: %s", payment_intent['id'])
         # TODO: Notify user, update order status
         
     elif event_type == "customer.subscription.created":
         subscription = event["data"]["object"]
-        print(f"Subscription created: {subscription['id']}")
+        logger.info("Subscription created: %s", subscription['id'])
         # TODO: Grant access to user
         
     elif event_type == "customer.subscription.updated":
         subscription = event["data"]["object"]
-        print(f"Subscription updated: {subscription['id']}")
+        logger.info("Subscription updated: %s", subscription['id'])
         # TODO: Update user access level
         
     elif event_type == "customer.subscription.deleted":
         subscription = event["data"]["object"]
-        print(f"Subscription canceled: {subscription['id']}")
+        logger.warning("Subscription canceled: %s", subscription['id'])
         # TODO: Revoke access
         
     elif event_type == "invoice.payment_succeeded":
         invoice = event["data"]["object"]
-        print(f"Invoice paid: {invoice['id']}")
+        logger.info("Invoice paid: %s", invoice['id'])
         # TODO: Send receipt
         
     elif event_type == "invoice.payment_failed":
         invoice = event["data"]["object"]
-        print(f"Invoice payment failed: {invoice['id']}")
+        logger.error("Invoice payment failed: %s", invoice['id'])
         # TODO: Notify user, retry payment
     
     return {"received": True}

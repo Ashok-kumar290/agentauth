@@ -4,11 +4,14 @@ Webhooks Service
 Handles webhook registration, event dispatching, and delivery.
 """
 import json
+import logging
 import hmac
 import hashlib
 import httpx
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+
+logger = logging.getLogger(__name__)
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -222,7 +225,7 @@ class WebhooksService:
                 
         except Exception as e:
             # Log error (in production, use proper logging)
-            print(f"Webhook delivery failed: {e}")
+            logger.error("Webhook delivery failed: %s", e)
     
     def _generate_signature(self, payload: str, secret: str) -> str:
         """Generate HMAC-SHA256 signature for webhook payload."""

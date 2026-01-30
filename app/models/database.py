@@ -1,19 +1,26 @@
 """
 Database connection and session management
 """
+import logging
 import ssl
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from typing import AsyncGenerator
 
+logger = logging.getLogger(__name__)
+
 from app.config import get_settings
 
 settings = get_settings()
 
-# Create SSL context for Neon/Railway PostgreSQL
 ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
+# In production, verify certificates properly
+if "localhost" not in (settings.database_url or ""):
+    ssl_context.check_hostname = True
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
+else:
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
 
 # Process DATABASE_URL for asyncpg compatibility
 db_url = settings.database_url
@@ -30,7 +37,7 @@ elif not db_url.startswith("postgresql+asyncpg://"):
     # If it's already asyncpg format, use as-is
     pass
 
-print(f"Database URL (masked): {db_url[:30]}...{db_url[-20:]}")
+logger.info("Database URL (masked): %s...%s", db_url[:30], db_url[-20:])
 
 # Create async engine with SSL
 engine = create_async_engine(

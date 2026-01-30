@@ -3,9 +3,12 @@ Billing service for subscription and usage management.
 
 Handles plan limits, usage tracking, and Stripe synchronization.
 """
+import logging
 from datetime import datetime
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 
@@ -226,7 +229,7 @@ async def cancel_subscription(db: AsyncSession, user_id: str) -> Subscription:
         try:
             await stripe_service.cancel_subscription(subscription.stripe_subscription_id)
         except Exception as e:
-            print(f"Stripe cancel error: {e}")
+            logger.error("Stripe cancel error: %s", e)
     
     subscription.status = SubscriptionStatus.CANCELED
     subscription.canceled_at = datetime.utcnow()

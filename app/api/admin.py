@@ -88,7 +88,8 @@ async def admin_login(request: AdminLoginRequest):
     
     Returns a JWT token valid for 1 hour.
     """
-    # Simple password check (in production, use bcrypt)
+    # Simple password check
+    # TODO: Use bcrypt password hashing in production instead of plaintext comparison
     if request.password != settings.admin_password:
         raise HTTPException(
             status_code=401, 
@@ -129,7 +130,7 @@ async def verify_token(
         if payload.get("type") == "admin":
             exp = datetime.fromtimestamp(payload["exp"])
             return AdminVerifyResponse(valid=True, expires_at=exp.isoformat())
-    except:
+    except Exception:
         pass
     
     return AdminVerifyResponse(valid=False)

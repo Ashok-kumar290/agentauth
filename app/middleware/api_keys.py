@@ -3,12 +3,15 @@ API Key Authentication
 
 Simple API key management for MVP.
 """
+import logging
 import secrets
 import hashlib
 from datetime import datetime
 from typing import Optional
 from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import APIKeyHeader
+
+logger = logging.getLogger(__name__)
 
 
 # Simple in-memory API key store (use database in production)
@@ -104,8 +107,8 @@ async def require_api_key(
 # Pre-generate a demo key for testing
 try:
     DEMO_KEY = generate_api_key("demo_user")
-    print(f"🔑 Demo API Key: {DEMO_KEY['key']}")
+    logger.info("Demo API Key generated: %s", DEMO_KEY['key'])
 except Exception as e:
-    print(f"Warning: Could not generate demo key: {e}")
+    logger.warning("Could not generate demo key: %s", e)
     DEMO_KEY = {"key": "demo_unavailable", "key_id": "n/a"}
 

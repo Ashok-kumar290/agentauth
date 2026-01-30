@@ -7,6 +7,7 @@ Prevents duplicate transactions using UUIDv4 keys stored in Redis.
 - Returns cached response for duplicate requests
 """
 
+import json
 import uuid
 import hashlib
 from typing import Optional
@@ -134,7 +135,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 # Return new response with body
                 return JSONResponse(
                     status_code=response.status_code,
-                    content=eval(body.decode()) if body else {},  # Parse JSON
+                    content=json.loads(body.decode()) if body else {},  # Parse JSON
                     headers={
                         "X-Idempotency-Key": idempotency_key,
                         **dict(response.headers)

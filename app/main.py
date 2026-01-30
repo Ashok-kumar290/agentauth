@@ -3,11 +3,14 @@ AgentAuth - Main Application Entry Point
 
 The authorization layer for AI agent purchases.
 """
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+
+logger = logging.getLogger(__name__)
 
 from app.config import get_settings
 from app.api import consents_router, authorize_router, verify_router, payments_router, dashboard_router, admin_router, limits_router, rules_router, analytics_router, webhooks_router, billing_router
@@ -27,30 +30,22 @@ async def lifespan(app: FastAPI):
         if settings.debug:
             await init_db()
     except Exception as e:
-        print(f"Warning: Database init failed: {e}")
+        logger.warning("Database init failed: %s", e)
         # Continue anyway - API will work but DB operations will fail
     
     # Initialize Redis connection (optional - will fail gracefully if unavailable)
     try:
         cache = get_cache_service()
-        print("Redis cache service initialized")
+        logger.info("Redis cache service initialized")
     except Exception as e:
-        print(f"Warning: Redis init failed (will use in-memory fallback): {e}")
-    
-    # Initialize OpenTelemetry tracing (optional)
-    try:
-        from app.tracing import init_tracing
-        init_tracing(app, service_name="agentauth")
-        print("OpenTelemetry tracing initialized")
-    except Exception as e:
-        print(f"Warning: Tracing init failed: {e}")
+        logger.warning("Redis init failed (will use in-memory fallback): %s", e)
     
     yield
     
     # Shutdown: Close Redis connection
     try:
         await close_redis()
-        print("Redis connection closed")
+        logger.info("Redis connection closed")
     except Exception:
         pass
 
@@ -115,7 +110,12 @@ app.add_middleware(TenantContextMiddleware)
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=[
+        "https://agentauth.in",
+        "https://www.agentauth.in",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
