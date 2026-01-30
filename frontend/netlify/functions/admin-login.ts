@@ -1,8 +1,8 @@
 import { Handler } from "@netlify/functions";
 import jwt from "jsonwebtoken";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "agentauth2026";
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || "admin-secret-change-in-production";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET || "";
 
 const handler: Handler = async (event) => {
     const headers = {
@@ -11,6 +11,10 @@ const handler: Handler = async (event) => {
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Content-Type": "application/json",
     };
+
+    if (!ADMIN_PASSWORD || !JWT_SECRET) {
+        return { statusCode: 503, headers, body: JSON.stringify({ error: "Server not configured" }) };
+    }
 
     if (event.httpMethod === "OPTIONS") {
         return { statusCode: 200, headers, body: "" };

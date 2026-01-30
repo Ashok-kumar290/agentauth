@@ -171,12 +171,8 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 }
 
 function generateSecurePassword(): string {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-    let password = "";
-    for (let i = 0; i < 16; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
+    const crypto = require("crypto");
+    return crypto.randomBytes(16).toString("hex");
 }
 
 async function sendWelcomeEmail(

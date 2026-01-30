@@ -20,6 +20,10 @@ interface ContactRequest {
     message: string;
 }
 
+function escapeHtml(str: string): string {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 const sendNotificationEmail = async (contact: ContactRequest): Promise<boolean> => {
     if (!RESEND_API_KEY) {
         console.log("RESEND_API_KEY not set, skipping notification email");
@@ -73,7 +77,7 @@ const sendNotificationEmail = async (contact: ContactRequest): Promise<boolean> 
     
     <div style="margin-top: 24px;">
       <p style="color: #666; margin: 0 0 8px 0; font-weight: 500;">Message:</p>
-      <div style="background: #f9f9f9; padding: 16px; border-radius: 8px; color: #1a1a1a; line-height: 1.6; white-space: pre-wrap;">${contact.message}</div>
+      <div style="background: #f9f9f9; padding: 16px; border-radius: 8px; color: #1a1a1a; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(contact.message)}</div>
     </div>
     
     <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee;">

@@ -1,6 +1,7 @@
 import { Handler, HandlerEvent } from "@netlify/functions";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import crypto from "crypto";
 
 const supabase = createClient(
     process.env.SUPABASE_URL || "",
@@ -11,7 +12,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Generate a 6-digit OTP
 function generateOTP(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return crypto.randomInt(100000, 999999).toString();
 }
 
 const handler: Handler = async (event: HandlerEvent) => {

@@ -1,5 +1,6 @@
 import { Handler } from "@netlify/functions";
 import Stripe from "stripe";
+import jwt from "jsonwebtoken";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
     apiVersion: "2025-12-15.clover",
@@ -41,6 +42,27 @@ const handler: Handler = async (event) => {
             statusCode: 405,
             headers,
             body: JSON.stringify({ error: "Method not allowed" }),
+        };
+    }
+
+    // Require admin authentication
+    const authHeader = event.headers["authorization"] || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const jwtSecret = process.env.ADMIN_JWT_SECRET || "";
+    if (!jwtSecret || !token) {
+        return {
+            statusCode: 401,
+            headers,
+            body: JSON.stringify({ error: "Authentication required" }),
+        };
+    }
+    try {
+        jwt.verify(token, jwtSecret);
+    } catch {
+        return {
+            statusCode: 401,
+            headers,
+            body: JSON.stringify({ error: "Invalid or expired token" }),
         };
     }
 

@@ -13,12 +13,6 @@ from app.services.cache_service import (
     close_redis,
     cached,
 )
-from app.services.velocity_service import (
-    VelocityService,
-    VelocityRules,
-    VelocityCheckResult,
-    check_transaction_velocity,
-)
 from app.services.event_service import (
     EventService,
     EventType,
@@ -38,10 +32,6 @@ __all__ = [
     "get_redis",
     "close_redis",
     "cached",
-    "VelocityService",
-    "VelocityRules",
-    "VelocityCheckResult",
-    "check_transaction_velocity",
     "EventService",
     "EventType",
     "CloudEvent",
