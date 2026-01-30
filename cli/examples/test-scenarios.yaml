@@ -1,0 +1,56 @@
+name: "AgentAuth Basic Authorization Tests"
+description: "Test core authorization policies for common scenarios"
+
+scenarios:
+  - name: "Allow small purchase from approved vendor"
+    request:
+      agentId: "procurement-bot"
+      action: "purchase"
+      amount: 99.99
+      merchant: "aws.amazon.com"
+      description: "Monthly EC2 instance"
+    expectedDecision: "ALLOWED"
+
+  - name: "Deny purchase from gambling site"
+    request:
+      agentId: "procurement-bot"
+      action: "purchase"
+      amount: 50.00
+      merchant: "online-casino.com"
+      description: "Gambling transaction"
+    expectedDecision: "DENIED"
+
+  - name: "Require approval for large purchase"
+    request:
+      agentId: "procurement-bot"
+      action: "purchase"
+      amount: 5000.00
+      merchant: "enterprise-saas.com"
+      description: "Annual license renewal"
+    expectedDecision: "PENDING"
+
+  - name: "Allow small refund"
+    request:
+      agentId: "support-bot"
+      action: "refund"
+      amount: 25.00
+      merchant: "customer-portal"
+      description: "Defective product refund"
+    expectedDecision: "ALLOWED"
+
+  - name: "Deny unauthorized agent action"
+    request:
+      agentId: "unknown-agent"
+      action: "transfer"
+      amount: 10000.00
+      merchant: "bank-transfer"
+      description: "Unauthorized transfer attempt"
+    expectedDecision: "DENIED"
+
+  - name: "Allow analytics data access"
+    request:
+      agentId: "analytics-agent"
+      action: "read"
+      resource: "usage-metrics"
+      description: "Daily metrics pull"
+    expectedDecision: "ALLOWED"
