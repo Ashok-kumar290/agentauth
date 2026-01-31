@@ -10,7 +10,7 @@ Cryptographic proof that a human authorized every AI agent transaction. Set spen
 
 🌐 **Website:** [agentauth.in](https://agentauth.in)  
 📖 **API Docs:** [api.agentauth.in/docs](https://agentauth.in/docs)  
-🎮 **Live Demo:** [api.agentauth.in/demo](https://agentauth.in/demo)
+🎮 **Live Demo:** [api.agentauth.in/demo](https://agentauth.in/#demo)
 
 ---
 
