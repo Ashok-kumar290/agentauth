@@ -9,8 +9,8 @@
 Cryptographic proof that a human authorized every AI agent transaction. Set spending limits, approve purchases, defend against chargebacks.
 
 🌐 **Website:** [agentauth.in](https://agentauth.in)  
-📖 **API Docs:** [api.agentauth.in/docs](https://api.agentauth.in/docs)  
-🎮 **Live Demo:** [api.agentauth.in/demo](https://api.agentauth.in/demo)
+📖 **API Docs:** [api.agentauth.in/docs](https://agentauth.in/docs)  
+🎮 **Live Demo:** [api.agentauth.in/demo](https://agentauth.in/demo)
 
 ---
 
