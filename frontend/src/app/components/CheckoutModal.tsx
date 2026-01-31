@@ -47,8 +47,8 @@ export function CheckoutModal({
                     email,
                     plan: planId, // startup, pro, enterprise
                     userId: `user_${Date.now()}`,
-                    successUrl: `${window.location.origin}/portal?checkout=success`,
-                    cancelUrl: `${window.location.origin}/pricing?checkout=canceled`,
+                    successUrl: `${window.location.origin}/nucleus?checkout=success`,
+                    cancelUrl: `${window.location.origin}/?checkout=canceled#pricing`,
                 }),
             });
 

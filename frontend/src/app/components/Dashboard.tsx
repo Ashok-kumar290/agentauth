@@ -334,10 +334,16 @@ const pageTitles: Record<NavSection, string> = {
 };
 
 // Main Dashboard Component
-export function Dashboard() {
-    const [activeNav, setActiveNav] = useState<NavSection>("dashboard");
+interface DashboardProps {
+    checkoutSuccess?: boolean;
+    onDismissCheckout?: () => void;
+}
+
+export function Dashboard({ checkoutSuccess, onDismissCheckout }: DashboardProps = {}) {
+    const [activeNav, setActiveNav] = useState<NavSection>(checkoutSuccess ? "billing" : "dashboard");
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [showWelcome, setShowWelcome] = useState(checkoutSuccess || false);
     const [period, setPeriod] = useState("7d");
     const [chartData, setChartData] = useState([65, 80, 45, 90, 70, 55, 40]);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -597,6 +603,31 @@ export function Dashboard() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Checkout Success Welcome Banner */}
+                {showWelcome && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mx-8 mt-6 p-4 bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                <CheckCircle className="w-5 h-5 text-emerald-400" />
+                            </div>
+                            <div>
+                                <p className="text-white font-medium">Payment Successful! Welcome to AgentAuth</p>
+                                <p className="text-gray-400 text-sm">Your subscription is active. Explore your dashboard to get started.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => { setShowWelcome(false); onDismissCheckout?.(); }}
+                            className="p-2 hover:bg-white/10 rounded-lg"
+                        >
+                            <X className="w-4 h-4 text-gray-400" />
+                        </button>
+                    </motion.div>
+                )}
 
                 {/* Header */}
                 <header className="flex justify-between items-center px-8 py-5 border-b border-[#222]">

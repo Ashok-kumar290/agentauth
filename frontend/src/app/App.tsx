@@ -134,11 +134,22 @@ function YCPage() {
 function NucleusPage() {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(isAdminAuthenticated());
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+
+  // Detect checkout=success query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") === "success") {
+      setCheckoutSuccess(true);
+      // Clean URL
+      window.history.replaceState(null, "", "/nucleus");
+    }
+  }, []);
 
   const handleAdminAuth = (a: boolean) => setIsAuthenticated(a);
 
   if (isAuthenticated) {
-    return <Dashboard />;
+    return <Dashboard checkoutSuccess={checkoutSuccess} onDismissCheckout={() => setCheckoutSuccess(false)} />;
   }
   return <AdminLogin onAuthenticated={handleAdminAuth} onBack={() => navigate("/")} />;
 }

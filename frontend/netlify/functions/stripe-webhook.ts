@@ -139,7 +139,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
             type: "magiclink",
             email: customerEmail,
             options: {
-                redirectTo: "https://agentauth.in/portal",
+                redirectTo: "https://agentauth.in/nucleus",
             },
         });
 

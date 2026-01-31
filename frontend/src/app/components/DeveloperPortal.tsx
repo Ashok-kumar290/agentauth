@@ -257,6 +257,12 @@ export function DeveloperPortal({ onClose }: DeveloperPortalProps) {
 
             <div className="space-y-3">
               <a
+                href="/nucleus"
+                className="block w-full text-center bg-gradient-to-r from-emerald-600 to-cyan-600 text-white py-3 rounded-xl font-medium hover:opacity-90 transition-opacity"
+              >
+                Go to Dashboard
+              </a>
+              <a
                 href="/reset-password"
                 className="block w-full text-center bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-xl font-medium hover:opacity-90 transition-opacity"
               >

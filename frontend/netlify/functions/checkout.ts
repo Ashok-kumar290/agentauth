@@ -97,8 +97,8 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             payment_method_types: ["card"],
             line_items: [{ price: priceId, quantity: 1 }],
             mode: "subscription",
-            success_url: successUrl || "https://agentauth.in/portal?checkout=success",
-            cancel_url: cancelUrl || "https://agentauth.in/pricing?checkout=canceled",
+            success_url: successUrl || "https://agentauth.in/nucleus?checkout=success",
+            cancel_url: cancelUrl || "https://agentauth.in/?checkout=canceled#pricing",
             metadata: {
                 user_id: userId || "",
                 plan,
